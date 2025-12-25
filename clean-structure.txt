@@ -1,0 +1,67 @@
+├── backend
+  ├── gstScraper.js
+  ├── models
+    ├── CompanySettings.js
+    ├── Deal.js
+    ├── DeliveryChallan.js
+    ├── Party.js
+    ├── Purchase.js
+    ├── PurchaseDelivery.js
+    ├── Quality.js
+    ├── TaxInvoice.js
+  ├── package.json
+  ├── routes
+    ├── companySettings.js
+    ├── deal.js
+    ├── deliveryChallan.js
+    ├── party.js
+    ├── purchase.js
+    ├── purchaseDelivery.js
+    ├── quality.js
+    ├── stock.js
+    ├── taxInvoice.js
+  ├── server.js
+├── clean-structure.txt
+├── companysetting.js
+├── frontend
+  ├── .env.development
+  ├── .env.local
+  ├── .env.production
+  ├── .gitignore
+  ├── package.json
+  ├── README.md
+  ├── src
+    ├── App.css
+    ├── App.js
+    ├── App.test.js
+    ├── components
+      ├── AppUI.css
+      ├── AppUI.js
+    ├── index.css
+    ├── index.js
+    ├── logo.svg
+    ├── pages
+      ├── AddBales.js
+      ├── CompanySettings.css
+      ├── CompanySettings.js
+      ├── Dashboard.js
+      ├── DealManagement.js
+      ├── DeliveryChallan.js
+      ├── InvoiceDetail.js
+      ├── PartyManagement.js
+      ├── PurchaseDeliveries.js
+      ├── PurchaseManagement.js
+      ├── QualityManagement.js
+      ├── TaxInvoice.js
+      ├── ViewChallans.js
+      ├── ViewInvoices.js
+    ├── reportWebVitals.js
+    ├── services
+      ├── api.js
+    ├── setupTests.js
+    ├── utils
+      ├── formatters.js
+├── generateTree.js
+├── src
+  ├── context
+    ├── ThemeContext.js
