@@ -1,3 +1,4 @@
+//backend/server.js
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
@@ -8,8 +9,11 @@ dotenv.config();
 
 const app = express();
 
+const ALLOW_ALL_ORIGINS = true; // 🔴 DEV MODE
+// const ALLOW_ALL_ORIGINS = false; // 🟢 PROD MODE
+
 // ============================================
-// CORS Configuration
+// CORS Configuration (DEV ↔ PROD TOGGLE)
 // ============================================
 const allowedOrigins = [
   'http://localhost:3000',
@@ -19,18 +23,29 @@ const allowedOrigins = [
 
 app.use(cors({
   origin: function (origin, callback) {
-    if (!origin) return callback(null, true);
-    if (allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      console.log(`❌ Blocked CORS request from: ${origin}`);
-      callback(new Error('Not allowed by CORS'));
+    // ✅ DEV MODE → allow everything
+    if (ALLOW_ALL_ORIGINS) {
+      return callback(null, true);
     }
+
+    // ✅ Allow server-to-server, Postman, curl
+    if (!origin) {
+      return callback(null, true);
+    }
+
+    // ✅ PROD MODE → strict whitelist
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+
+    console.log(`❌ Blocked CORS request from: ${origin}`);
+    callback(new Error('Not allowed by CORS'));
   },
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true,
 }));
+
 
 // ============================================
 // Middleware
@@ -48,11 +63,16 @@ mongoose.connect(process.env.MONGODB_URI)
 // ============================================
 // Import and Mount Routes
 // ============================================
+
+// 🔐 Authentication Routes (Public - No auth required)
+app.use('/api/auth', require('./routes/auth'));
+
+// 📊 Application Routes (Will be protected)
 app.use('/api/company-settings', require('./routes/companySettings'));
 app.use('/api/qualities', require('./routes/quality'));
 app.use('/api/parties', require('./routes/party'));
 app.use('/api/delivery-challans', require('./routes/deliveryChallan'));
-app.use('/api/deals', require('./routes/deal')); // ✅ NEW: Deal routes
+app.use('/api/deals', require('./routes/deal'));
 app.use('/api/tax-invoices', require('./routes/taxInvoice'));
 app.use('/api/stock', require('./routes/stock'));
 app.use('/api/purchases', require('./routes/purchase'));
@@ -111,6 +131,7 @@ app.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Server running on port ${PORT}`);
   console.log(`📱 Local: http://localhost:${PORT}`);
   console.log(`🌐 Network: http://${localIP}:${PORT}`);
+  console.log('🔐 Authentication: Enabled');
   console.log('========================================');
 });
 

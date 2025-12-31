@@ -1,3 +1,4 @@
+//backend/models/taxInvoice.js
 const mongoose = require('mongoose');
 
 const baleDetailSchema = new mongoose.Schema({

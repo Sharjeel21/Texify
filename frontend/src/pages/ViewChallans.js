@@ -1,8 +1,8 @@
-//fronend/src/pages/ViewChallan.js
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { deliveryChallanAPI, qualityAPI, companySettingsAPI } from '../services/api';
 import { useReactToPrint } from 'react-to-print';
+import { formatDate } from '../utils/formatters';
 
 function ViewChallans() {
   const navigate = useNavigate();
@@ -127,9 +127,43 @@ function ViewChallans() {
     const { challan, settings } = props;
     if (!challan) return null;
 
+    // Get challan format settings with proper defaults
+    const format = settings?.challanFormat || {};
+    
+    // Display settings
+    const showLogo = format.showLogo !== false;
+    const logoPosition = format.logoPosition || 'left';
+    const showGanthPress = format.showGanthPress !== false;
+    const showWeights = format.showWeights !== false;
+    
+    // Typography settings
+    const fontFamily = format.fontFamily || 'Segoe UI';
+    const fontWeight = format.fontWeight || 'normal';
+    const baseFontSize = format.fontSize?.base || 11;
+    const companyNameSize = format.fontSize?.companyName || 22;
+    const headingSize = format.fontSize?.heading || 12;
+    
+    // Color mode
+    const colorMode = format.colorMode || 'color';
+    const isBlackWhite = colorMode === 'black_white';
+    
+    // Dynamic colors based on mode
+    const textColor = isBlackWhite ? '#000000' : '#212529';
+    const headerBg = isBlackWhite ? '#ffffff' : '#f8f9fa';
+    const tableBg = isBlackWhite ? '#f5f5f5' : '#e9ecef';
+    const lightBg = isBlackWhite ? '#ffffff' : '#f8f9fa';
+    const borderColor = isBlackWhite ? '#000000' : '#333333';
+    const mutedText = isBlackWhite ? '#000000' : '#6c757d';
+    const companyNameColor = isBlackWhite ? '#000000' : '#2c3e50';
+    
+    // Get preferences
+    const dateFormat = settings?.preferences?.dateFormat || 'DD/MM/YYYY';
+    const footerNote = settings?.terms?.challan?.line1 || 
+      'Any type of complaint regarding weight and folding will be entertained within 48Hrs.';
+
     const balesArray = challan.bales;
     const baleCount = balesArray.length;
-    const hasLogo = settings?.logo;
+    const hasLogo = showLogo && settings?.logo;
 
     const pages = [];
     if (baleCount <= 5) {
@@ -180,9 +214,9 @@ function ViewChallans() {
                   <div key={baleIndex} style={{
                     width: columnWidth,
                     flex: `0 0 ${columnWidth}`,
-                    border: '2px solid #333',
+                    border: `2px solid ${borderColor}`,
                     boxSizing: 'border-box',
-                    fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
+                    fontFamily: fontFamily,
                     borderRadius: '8px',
                     overflow: 'hidden',
                     display: 'flex',
@@ -192,6 +226,7 @@ function ViewChallans() {
                     height: '100%'
                   }}>
                     
+                    {/* Logo Watermark - Only if enabled */}
                     {hasLogo && (
                       <div style={{
                         position: 'absolute',
@@ -216,7 +251,7 @@ function ViewChallans() {
                             width: 'auto',
                             height: 'auto',
                             objectFit: 'contain',
-                            filter: 'grayscale(100%)'
+                            filter: isBlackWhite ? 'grayscale(100%)' : 'grayscale(100%)'
                           }}
                           onError={(e) => {
                             e.target.style.display = 'none';
@@ -225,10 +260,11 @@ function ViewChallans() {
                       </div>
                     )}
 
+                    {/* Header */}
                     <div style={{
-                      borderBottom: '2px solid #333',
+                      borderBottom: `2px solid ${borderColor}`,
                       padding: '10px 6px 8px',
-                      background: '#f8f9fa',
+                      background: headerBg,
                       position: 'relative',
                       zIndex: 1
                     }}>
@@ -241,53 +277,62 @@ function ViewChallans() {
                       }}>
                         <div style={{
                           marginTop: '2px',
-                          fontSize: columnCount === 5 ? '8px' : '9px',
+                          fontSize: columnCount === 5 ? `${baseFontSize - 3}px` : `${baseFontSize - 2}px`,
                           fontWeight: '500',
                           fontStyle: 'italic',
                           textDecoration: 'underline',
                           letterSpacing: '0.3px',
-                          color: '#6c757d'
+                          color: mutedText,
+                          fontFamily: fontFamily
                         }}>Delivery Challan</div>
                         
                         <div style={{
-                          fontSize: columnCount === 5 ? '18px' : '22px',
+                          fontSize: columnCount === 5 ? `${companyNameSize - 4}px` : `${companyNameSize}px`,
                           fontWeight: 'bold',
                           letterSpacing: columnCount === 5 ? '2.5px' : '4px',
                           fontFamily: 'Georgia, serif',
                           marginBottom: '3px',
-                          color: '#2c3e50',
+                          color: companyNameColor,
                           lineHeight: '1.1'
                         }}>
                           {settings?.companyName || 'S S FABRICS'}
                         </div>
                         
                         <div style={{ 
-                          fontSize: columnCount === 5 ? '8px' : '9px', 
+                          fontSize: columnCount === 5 ? `${baseFontSize - 3}px` : `${baseFontSize - 2}px`,
                           marginBottom: '1px', 
-                          color: '#495057', 
-                          lineHeight: '1.2' 
+                          color: textColor,
+                          lineHeight: '1.2',
+                          fontFamily: fontFamily,
+                          fontWeight: fontWeight
                         }}>
                           {settings?.mobile || '9823671261'}
                         </div>
                       </div>
                     </div>
 
-                    <div style={{
-                      borderBottom: '2px solid #333',
-                      padding: '6px',
-                      fontSize: columnCount === 5 ? '10px' : '11px',
-                      fontWeight: 'bold',
-                      textAlign: 'center',
-                      background: '#e9ecef',
-                      color: '#2c3e50',
-                      position: 'relative',
-                      zIndex: 1
-                    }}>
-                      {settings?.ganthPressName || 'New National Ganth Press'}{settings?.ganthPressAddress ? `, ${settings.ganthPressAddress}` : ', Brathar Bagh'}
-                    </div>
+                    {/* Ganth Press - Only show if enabled */}
+                    {showGanthPress && (
+                      <div style={{
+                        borderBottom: `2px solid ${borderColor}`,
+                        padding: '6px',
+                        fontSize: columnCount === 5 ? `${baseFontSize - 1}px` : `${baseFontSize}px`,
+                        fontWeight: 'bold',
+                        textAlign: 'center',
+                        background: tableBg,
+                        color: companyNameColor,
+                        position: 'relative',
+                        zIndex: 1,
+                        fontFamily: fontFamily
+                      }}>
+                        {settings?.ganthPressName || 'New National Ganth Press'}
+                        {settings?.ganthPressAddress && `, ${settings.ganthPressAddress}`}
+                      </div>
+                    )}
 
+                    {/* Quality and Bale Details */}
                     <div style={{
-                      borderBottom: '2px solid #333',
+                      borderBottom: `2px solid ${borderColor}`,
                       padding: '6px',
                       background: '#fff',
                       position: 'relative',
@@ -295,23 +340,25 @@ function ViewChallans() {
                     }}>
                       <div style={{ marginBottom: '6px' }}>
                         <div style={{
-                          border: '1px solid #666',
+                          border: `1px solid ${borderColor}`,
                           borderRadius: '4px',
                           padding: '5px 8px',
-                          background: '#e9ecef',
+                          background: tableBg,
                           display: 'flex',
                           justifyContent: 'space-between',
                           alignItems: 'center'
                         }}>
                           <span style={{ 
-                            fontSize: columnCount === 5 ? '9px' : '10px', 
-                            color: '#6c757d',
-                            fontWeight: '500'
+                            fontSize: columnCount === 5 ? `${baseFontSize - 2}px` : `${baseFontSize - 1}px`,
+                            color: mutedText,
+                            fontWeight: '500',
+                            fontFamily: fontFamily
                           }}>Quality</span>
                           <span style={{ 
-                            fontSize: columnCount === 5 ? '11px' : '13px', 
+                            fontSize: columnCount === 5 ? `${baseFontSize}px` : `${baseFontSize + 2}px`,
                             fontWeight: 'bold', 
-                            color: '#2c3e50' 
+                            color: companyNameColor,
+                            fontFamily: fontFamily
                           }}>
                             {challan.qualityName}
                           </span>
@@ -321,23 +368,25 @@ function ViewChallans() {
                       <div style={{ display: 'flex', gap: '6px' }}>
                         <div style={{
                           flex: 1,
-                          border: '1px solid #666',
+                          border: `1px solid ${borderColor}`,
                           borderRadius: '4px',
                           padding: '5px 8px',
-                          background: '#e9ecef',
+                          background: tableBg,
                           display: 'flex',
                           justifyContent: 'space-between',
                           alignItems: 'center'
                         }}>
                           <span style={{ 
-                            fontSize: columnCount === 5 ? '9px' : '10px', 
-                            color: '#6c757d',
-                            fontWeight: '500'
+                            fontSize: columnCount === 5 ? `${baseFontSize - 2}px` : `${baseFontSize - 1}px`,
+                            color: mutedText,
+                            fontWeight: '500',
+                            fontFamily: fontFamily
                           }}>Bale No</span>
                           <span style={{ 
-                            fontSize: columnCount === 5 ? '11px' : '13px', 
+                            fontSize: columnCount === 5 ? `${baseFontSize}px` : `${baseFontSize + 2}px`,
                             fontWeight: 'bold', 
-                            color: '#2c3e50' 
+                            color: companyNameColor,
+                            fontFamily: fontFamily
                           }}>
                             {bale.baleNumber}
                           </span>
@@ -345,23 +394,25 @@ function ViewChallans() {
                         
                         <div style={{
                           flex: 1,
-                          border: '1px solid #666',
+                          border: `1px solid ${borderColor}`,
                           borderRadius: '4px',
                           padding: '5px 8px',
-                          background: '#e9ecef',
+                          background: tableBg,
                           display: 'flex',
                           justifyContent: 'space-between',
                           alignItems: 'center'
                         }}>
                           <span style={{ 
-                            fontSize: columnCount === 5 ? '9px' : '10px', 
-                            color: '#6c757d',
-                            fontWeight: '500'
+                            fontSize: columnCount === 5 ? `${baseFontSize - 2}px` : `${baseFontSize - 1}px`,
+                            color: mutedText,
+                            fontWeight: '500',
+                            fontFamily: fontFamily
                           }}>Pieces</span>
                           <span style={{ 
-                            fontSize: columnCount === 5 ? '11px' : '13px', 
+                            fontSize: columnCount === 5 ? `${baseFontSize}px` : `${baseFontSize + 2}px`,
                             fontWeight: 'bold', 
-                            color: '#2c3e50' 
+                            color: companyNameColor,
+                            fontFamily: fontFamily
                           }}>
                             {bale.numberOfPieces}
                           </span>
@@ -369,10 +420,11 @@ function ViewChallans() {
                       </div>
                     </div>
 
+                    {/* Date */}
                     <div style={{
-                      borderBottom: '2px solid #333',
+                      borderBottom: `2px solid ${borderColor}`,
                       padding: '5px 8px',
-                      background: '#f8f9fa',
+                      background: headerBg,
                       display: 'flex',
                       justifyContent: 'space-between',
                       alignItems: 'center',
@@ -380,19 +432,22 @@ function ViewChallans() {
                       zIndex: 1
                     }}>
                       <span style={{ 
-                        fontSize: columnCount === 5 ? '9px' : '10px',
+                        fontSize: columnCount === 5 ? `${baseFontSize - 2}px` : `${baseFontSize - 1}px`,
                         fontWeight: '600',
-                        color: '#6c757d'
+                        color: mutedText,
+                        fontFamily: fontFamily
                       }}>Date:</span>
                       <span style={{ 
-                        fontSize: columnCount === 5 ? '10px' : '12px', 
+                        fontSize: columnCount === 5 ? `${baseFontSize - 1}px` : `${baseFontSize + 1}px`,
                         fontWeight: 'bold', 
-                        color: '#2c3e50' 
+                        color: companyNameColor,
+                        fontFamily: fontFamily
                       }}>
-                        {new Date(bale.date).toLocaleDateString('en-GB')}
+                        {formatDate(bale.date, dateFormat)}
                       </span>
                     </div>
 
+                    {/* Cloth Details Table - UPDATED WITH BORDERLESS ROWS */}
                     <div style={{ 
                       flex: '1', 
                       display: 'flex', 
@@ -404,183 +459,231 @@ function ViewChallans() {
                     }}>
                       <table style={{ width: '100%', borderCollapse: 'collapse', flex: '1' }}>
                         <thead>
-                          <tr style={{ borderBottom: '2px solid #333', background: '#e9ecef' }}>
+                          <tr style={{ borderBottom: `2px solid ${borderColor}`, background: tableBg }}>
                             <th style={{
-                              border: 'none',
-                              borderRight: '1px solid #666',
+                              borderLeft: 'none',
+                              borderRight: `1px solid ${borderColor}`,
+                              borderTop: 'none',
+                              borderBottom: `2px solid ${borderColor}`,
                               padding: columnCount === 5 ? '5px 3px' : '6px 4px',
-                              fontSize: columnCount === 5 ? '11px' : '12px',
+                              fontSize: columnCount === 5 ? `${headingSize - 1}px` : `${headingSize}px`,
+                              fontFamily: fontFamily,
                               fontWeight: 'bold',
                               textAlign: 'center',
-                              color: '#2c3e50'
+                              color: textColor
                             }}>Sr No</th>
                             <th style={{
-                              border: 'none',
-                              borderRight: '1px solid #666',
+                              borderLeft: 'none',
+                              borderRight: `1px solid ${borderColor}`,
+                              borderTop: 'none',
+                              borderBottom: `2px solid ${borderColor}`,
                               padding: columnCount === 5 ? '5px 3px' : '6px 4px',
-                              fontSize: columnCount === 5 ? '11px' : '12px',
+                              fontSize: columnCount === 5 ? `${headingSize - 1}px` : `${headingSize}px`,
+                              fontFamily: fontFamily,
                               fontWeight: 'bold',
                               textAlign: 'center',
-                              color: '#2c3e50'
+                              color: textColor
                             }}>Meter</th>
-                            <th style={{
-                              border: 'none',
-                              borderRight: '1px solid #666',
-                              padding: columnCount === 5 ? '5px 3px' : '6px 4px',
-                              fontSize: columnCount === 5 ? '11px' : '12px',
-                              fontWeight: 'bold',
-                              textAlign: 'center',
-                              color: '#2c3e50'
-                            }}>Weight (kg)</th>
+                            {/* Weight column - Only show if enabled */}
+                            {showWeights && (
+                              <th style={{
+                                borderLeft: 'none',
+                                borderRight: 'none',
+                                borderTop: 'none',
+                                borderBottom: `2px solid ${borderColor}`,
+                                padding: columnCount === 5 ? '5px 3px' : '6px 4px',
+                                fontSize: columnCount === 5 ? `${headingSize - 1}px` : `${headingSize}px`,
+                                fontFamily: fontFamily,
+                                fontWeight: 'bold',
+                                textAlign: 'center',
+                                color: textColor
+                              }}>Weight (kg)</th>
+                            )}
                           </tr>
                         </thead>
                         <tbody>
                           {bale.cloths.map((cloth, idx) => (
                             <tr key={idx} style={{ height: columnCount === 5 ? '18px' : '20px' }}>
                               <td style={{
-                                border: 'none',
-                                borderRight: '1px solid #666',
+                                borderLeft: 'none',
+                                borderRight: `1px solid ${borderColor}`,
+                                borderTop: 'none',
+                                borderBottom: 'none',
                                 padding: '3px',
                                 textAlign: 'center',
-                                fontSize: columnCount === 5 ? '11px' : '12px',
+                                fontSize: columnCount === 5 ? `${baseFontSize}px` : `${baseFontSize + 1}px`,
+                                fontFamily: fontFamily,
                                 fontWeight: '600',
-                                color: '#2c3e50'
+                                color: companyNameColor
                               }}>
                                 {idx + 1}
                               </td>
                               <td style={{
-                                border: 'none',
-                                borderRight: '1px solid #666',
+                                borderLeft: 'none',
+                                borderRight: showWeights ? `1px solid ${borderColor}` : 'none',
+                                borderTop: 'none',
+                                borderBottom: 'none',
                                 padding: '3px 6px',
                                 textAlign: 'center',
-                                fontSize: columnCount === 5 ? '11px' : '12px',
+                                fontSize: columnCount === 5 ? `${baseFontSize}px` : `${baseFontSize + 1}px`,
+                                fontFamily: fontFamily,
                                 fontWeight: '600',
-                                color: '#2c3e50'
+                                color: companyNameColor
                               }}>
                                 {cloth.meter ? Math.round(cloth.meter) : ''}
                               </td>
-                              <td style={{
-                                border: 'none',
-                                borderRight: '1px solid #666',
-                                padding: '3px',
-                                textAlign: 'center',
-                                fontSize: columnCount === 5 ? '11px' : '12px',
-                                fontWeight: '600',
-                                color: '#2c3e50'
-                              }}>
-                                {cloth.weight ? cloth.weight.toFixed(2) : ''}
-                              </td>
+                              {showWeights && (
+                                <td style={{
+                                  borderLeft: 'none',
+                                  borderRight: 'none',
+                                  borderTop: 'none',
+                                  borderBottom: 'none',
+                                  padding: '3px',
+                                  textAlign: 'center',
+                                  fontSize: columnCount === 5 ? `${baseFontSize}px` : `${baseFontSize + 1}px`,
+                                  fontFamily: fontFamily,
+                                  fontWeight: '600',
+                                  color: companyNameColor
+                                }}>
+                                  {cloth.weight ? cloth.weight.toFixed(2) : ''}
+                                </td>
+                              )}
                             </tr>
                           ))}
                           {emptyRows.map((_, idx) => (
                             <tr key={`empty-${idx}`} style={{ height: columnCount === 5 ? '18px' : '20px' }}>
                               <td style={{
-                                border: 'none',
-                                borderRight: '1px solid #666',
+                                borderLeft: 'none',
+                                borderRight: `1px solid ${borderColor}`,
+                                borderTop: 'none',
+                                borderBottom: 'none',
                                 padding: '3px',
                                 textAlign: 'center',
-                                fontSize: columnCount === 5 ? '11px' : '12px',
+                                fontSize: columnCount === 5 ? `${baseFontSize}px` : `${baseFontSize + 1}px`,
+                                fontFamily: fontFamily,
                                 fontWeight: '600',
-                                color: '#2c3e50'
+                                color: companyNameColor
                               }}>
                                 {bale.cloths.length + idx + 1}
                               </td>
                               <td style={{
-                                border: 'none',
-                                borderRight: '1px solid #666',
+                                borderLeft: 'none',
+                                borderRight: showWeights ? `1px solid ${borderColor}` : 'none',
+                                borderTop: 'none',
+                                borderBottom: 'none',
                                 padding: '3px'
                               }}></td>
-                              <td style={{
-                                border: 'none',
-                                borderRight: '1px solid #666',
-                                padding: '3px'
-                              }}></td>
+                              {showWeights && (
+                                <td style={{
+                                  borderLeft: 'none',
+                                  borderRight: 'none',
+                                  borderTop: 'none',
+                                  borderBottom: 'none',
+                                  padding: '3px'
+                                }}></td>
+                              )}
                             </tr>
                           ))}
                           
+                          {/* Total Row */}
                           <tr style={{
-                            borderTop: '2px solid #333',
-                            borderBottom: '2px solid #333',
-                            background: '#e9ecef',
+                            borderTop: `2px solid ${borderColor}`,
+                            background: tableBg,
                             height: columnCount === 5 ? '22px' : '24px'
                           }}>
                             <td style={{
-                              border: 'none',
-                              borderRight: '1px solid #666',
+                              borderLeft: 'none',
+                              borderRight: `1px solid ${borderColor}`,
+                              borderTop: `2px solid ${borderColor}`,
+                              borderBottom: 'none',
                               fontWeight: 'bold',
                               textAlign: 'center',
-                              fontSize: columnCount === 5 ? '11px' : '12px',
+                              fontSize: columnCount === 5 ? `${baseFontSize}px` : `${baseFontSize + 1}px`,
+                              fontFamily: fontFamily,
                               padding: '4px',
-                              color: '#2c3e50'
+                              color: companyNameColor
                             }}>
                               TOTAL
                             </td>
                             <td style={{
-                              border: 'none',
-                              borderRight: '1px solid #666',
+                              borderLeft: 'none',
+                              borderRight: showWeights ? `1px solid ${borderColor}` : 'none',
+                              borderTop: `2px solid ${borderColor}`,
+                              borderBottom: 'none',
                               padding: '4px 6px',
                               textAlign: 'center',
                               fontWeight: 'bold',
-                              fontSize: columnCount === 5 ? '11px' : '12px',
-                              color: '#2c3e50'
+                              fontSize: columnCount === 5 ? `${baseFontSize}px` : `${baseFontSize + 1}px`,
+                              fontFamily: fontFamily,
+                              color: companyNameColor
                             }}>
                               {Math.round(bale.totalMeter)}
                             </td>
-                            <td style={{
-                              border: 'none',
-                              borderRight: '1px solid #666',
-                              textAlign: 'center',
-                              fontWeight: 'bold',
-                              fontSize: columnCount === 5 ? '11px' : '12px',
-                              padding: '4px',
-                              color: '#2c3e50'
-                            }}>
-                              {bale.totalWeight.toFixed(2)}
-                            </td>
+                            {showWeights && (
+                              <td style={{
+                                borderLeft: 'none',
+                                borderRight: 'none',
+                                borderTop: `2px solid ${borderColor}`,
+                                borderBottom: 'none',
+                                textAlign: 'center',
+                                fontWeight: 'bold',
+                                fontSize: columnCount === 5 ? `${baseFontSize}px` : `${baseFontSize + 1}px`,
+                                fontFamily: fontFamily,
+                                padding: '4px',
+                                color: companyNameColor
+                              }}>
+                                {bale.totalWeight.toFixed(2)}
+                              </td>
+                            )}
                           </tr>
                         </tbody>
                       </table>
                     </div>
 
+                    {/* Footer Terms */}
                     <div style={{
-                      borderTop: '2px solid #333',
+                      borderTop: `2px solid ${borderColor}`,
                       padding: '6px',
-                      background: '#f8f9fa',
+                      background: headerBg,
                       position: 'relative',
                       zIndex: 1
                     }}>
                       <div style={{ 
-                        fontSize: columnCount === 5 ? '8px' : '9px', 
+                        fontSize: columnCount === 5 ? `${baseFontSize - 3}px` : `${baseFontSize - 2}px`,
                         fontWeight: 'bold', 
                         marginBottom: '3px', 
-                        color: '#2c3e50' 
+                        color: companyNameColor,
+                        fontFamily: fontFamily
                       }}>Terms & Conditions</div>
                       <div style={{ 
-                        fontSize: columnCount === 5 ? '7px' : '8px', 
+                        fontSize: columnCount === 5 ? `${baseFontSize - 4}px` : `${baseFontSize - 3}px`,
                         lineHeight: '1.4', 
-                        color: '#495057' 
+                        color: textColor,
+                        fontFamily: fontFamily,
+                        fontWeight: fontWeight
                       }}>
-                        {settings?.termsLine1 || 
-                          'Any type of complaint regarding weight and folding will be entertained within 48Hrs.'}
+                        {footerNote}
                       </div>
                     </div>
 
+                    {/* Signature */}
                     <div style={{
-                      borderTop: '1px solid #666',
+                      borderTop: `1px solid ${borderColor}`,
                       padding: '8px 6px 6px',
                       textAlign: 'center',
                       position: 'relative',
                       zIndex: 1
                     }}>
                       <div style={{ 
-                        borderTop: '1px solid #666', 
+                        borderTop: `1px solid ${borderColor}`,
                         display: 'inline-block', 
                         minWidth: '60%', 
                         paddingTop: '4px', 
-                        fontSize: columnCount === 5 ? '8px' : '9px',
-                        color: '#6c757d'
+                        fontSize: columnCount === 5 ? `${baseFontSize - 3}px` : `${baseFontSize - 2}px`,
+                        color: mutedText,
+                        fontFamily: fontFamily
                       }}>
-                        Authorized Signature
+                        {settings?.signatureText || 'Authorized Signature'}
                       </div>
                     </div>
 

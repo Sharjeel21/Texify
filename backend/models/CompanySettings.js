@@ -27,8 +27,6 @@ const companySettingsSchema = new mongoose.Schema({
     type: String,
     trim: true
   },
-  
-  // Contact Details (Optional)
   mobile: {
     type: String,
     trim: true
@@ -38,8 +36,6 @@ const companySettingsSchema = new mongoose.Schema({
     trim: true,
     lowercase: true
   },
-  
-  // GST Details
   gstNumber: {
     type: String,
     required: true,
@@ -47,8 +43,6 @@ const companySettingsSchema = new mongoose.Schema({
     uppercase: true,
     trim: true
   },
-  
-  // Logo (Base64 encoded image)
   logo: {
     type: String
   },
@@ -73,9 +67,14 @@ const companySettingsSchema = new mongoose.Schema({
     type: String,
     trim: true
   },
+  panNumber: {
+    type: String,
+    uppercase: true,
+    trim: true
+  },
   
   // ============================================
-  // GANTH PRESS DETAILS (for Delivery Challan)
+  // GANTH PRESS DETAILS
   // ============================================
   ganthPressName: {
     type: String,
@@ -87,10 +86,29 @@ const companySettingsSchema = new mongoose.Schema({
   },
   
   // ============================================
+  // FINANCIAL YEAR CONFIGURATION
+  // ============================================
+  financialYear: {
+    startMonth: {
+      type: Number,
+      default: 4,
+      min: 1,
+      max: 12
+    },
+    currentYear: {
+      type: Number,
+      default: () => new Date().getFullYear()
+    },
+    lastResetDate: {
+      type: Date,
+      default: null
+    }
+  },
+  
+  // ============================================
   // DOCUMENT NUMBER SERIES
   // ============================================
   numberSeries: {
-    // Invoice Number Series
     invoicePrefix: {
       type: String,
       default: 'INV',
@@ -104,17 +122,21 @@ const companySettingsSchema = new mongoose.Schema({
       type: Number,
       default: 0
     },
-    invoiceResetYearly: {
-      type: Boolean,
-      default: true
+    invoiceResetMode: {
+      type: String,
+      enum: ['financial_year', 'calendar_year', 'manual', 'never'],
+      default: 'financial_year'
     },
     invoiceYearFormat: {
       type: String,
       enum: ['YYYY', 'YY', 'YYYY-YY', 'none'],
       default: 'YY'
     },
+    invoiceLastReset: {
+      type: Date,
+      default: null
+    },
     
-    // Challan Number Series
     challanPrefix: {
       type: String,
       default: 'DC',
@@ -128,17 +150,21 @@ const companySettingsSchema = new mongoose.Schema({
       type: Number,
       default: 0
     },
-    challanResetYearly: {
-      type: Boolean,
-      default: true
+    challanResetMode: {
+      type: String,
+      enum: ['financial_year', 'calendar_year', 'manual', 'never'],
+      default: 'financial_year'
     },
     challanYearFormat: {
       type: String,
       enum: ['YYYY', 'YY', 'YYYY-YY', 'none'],
       default: 'YY'
     },
+    challanLastReset: {
+      type: Date,
+      default: null
+    },
     
-    // Purchase Order Number Series
     purchasePrefix: {
       type: String,
       default: 'PO',
@@ -152,14 +178,19 @@ const companySettingsSchema = new mongoose.Schema({
       type: Number,
       default: 0
     },
-    purchaseResetYearly: {
-      type: Boolean,
-      default: true
+    purchaseResetMode: {
+      type: String,
+      enum: ['financial_year', 'calendar_year', 'manual', 'never'],
+      default: 'financial_year'
     },
     purchaseYearFormat: {
       type: String,
       enum: ['YYYY', 'YY', 'YYYY-YY', 'none'],
       default: 'YY'
+    },
+    purchaseLastReset: {
+      type: Date,
+      default: null
     }
   },
   
@@ -167,33 +198,57 @@ const companySettingsSchema = new mongoose.Schema({
   // INVOICE FORMAT SETTINGS
   // ============================================
   invoiceFormat: {
-    // Layout
-    template: {
-      type: String,
-      enum: ['classic', 'modern', 'minimal', 'detailed'],
-      default: 'classic'
-    },
+    // Display Options
     showLogo: {
       type: Boolean,
       default: true
     },
     logoPosition: {
       type: String,
-      enum: ['left', 'center', 'right'],
+      enum: ['left', 'right'],
       default: 'left'
     },
     
-    // Colors
-    primaryColor: {
+    // Color Mode
+    colorMode: {
       type: String,
-      default: '#2c3e50'
-    },
-    accentColor: {
-      type: String,
-      default: '#3498db'
+      enum: ['color', 'black_white'],
+      default: 'color'
     },
     
-    // Fields to Show/Hide
+    // Typography Settings
+    fontFamily: {
+      type: String,
+      enum: ['Segoe UI', 'Arial', 'Times New Roman', 'Georgia', 'Courier New', 'Verdana'],
+      default: 'Segoe UI'
+    },
+    fontSize: {
+      base: {
+        type: Number,
+        default: 11, // Base font size in px
+        min: 8,
+        max: 16
+      },
+      companyName: {
+        type: Number,
+        default: 48,
+        min: 24,
+        max: 72
+      },
+      heading: {
+        type: Number,
+        default: 12,
+        min: 10,
+        max: 18
+      }
+    },
+    fontWeight: {
+      type: String,
+      enum: ['normal', 'bold'],
+      default: 'normal'
+    },
+    
+    // Show/Hide Options
     showBankDetails: {
       type: Boolean,
       default: true
@@ -201,27 +256,6 @@ const companySettingsSchema = new mongoose.Schema({
     showTerms: {
       type: Boolean,
       default: true
-    },
-    showSignature: {
-      type: Boolean,
-      default: true
-    },
-    showQRCode: {
-      type: Boolean,
-      default: false
-    },
-    
-    // Footer Text
-    footerText: {
-      type: String,
-      default: 'Thank you for your business!'
-    },
-    
-    // Tax Display
-    taxDisplayStyle: {
-      type: String,
-      enum: ['combined', 'separate', 'detailed'],
-      default: 'combined'
     }
   },
   
@@ -229,39 +263,64 @@ const companySettingsSchema = new mongoose.Schema({
   // CHALLAN FORMAT SETTINGS
   // ============================================
   challanFormat: {
-    // Layout
-    template: {
-      type: String,
-      enum: ['compact', 'detailed', 'summary'],
-      default: 'detailed'
-    },
+    // Display Options
     showLogo: {
       type: Boolean,
       default: true
     },
+    logoPosition: {
+      type: String,
+      enum: ['left', 'right'],
+      default: 'left'
+    },
     
-    // Fields to Show/Hide
+    // Color Mode
+    colorMode: {
+      type: String,
+      enum: ['color', 'black_white'],
+      default: 'color'
+    },
+    
+    // Typography Settings
+    fontFamily: {
+      type: String,
+      enum: ['Segoe UI', 'Arial', 'Times New Roman', 'Georgia', 'Courier New', 'Verdana'],
+      default: 'Segoe UI'
+    },
+    fontSize: {
+      base: {
+        type: Number,
+        default: 11,
+        min: 8,
+        max: 16
+      },
+      companyName: {
+        type: Number,
+        default: 22,
+        min: 16,
+        max: 32
+      },
+      heading: {
+        type: Number,
+        default: 12,
+        min: 10,
+        max: 18
+      }
+    },
+    fontWeight: {
+      type: String,
+      enum: ['normal', 'bold'],
+      default: 'normal'
+    },
+    
+    // Show/Hide Options
     showGanthPress: {
-      type: Boolean,
-      default: true
-    },
-    showBaleDetails: {
-      type: Boolean,
-      default: true
-    },
-    showQualityBreakdown: {
       type: Boolean,
       default: true
     },
     showWeights: {
       type: Boolean,
       default: true
-    },
-    
-    // Footer
-    footerNote: {
-      type: String,
-      default: 'Goods remain the property of the consignor until paid for'
     }
   },
   
@@ -276,13 +335,14 @@ const companySettingsSchema = new mongoose.Schema({
       line4: String
     },
     challan: {
-      line1: String,
-      line2: String,
-      line3: String
+      line1: {
+        type: String,
+        default: 'Any type of complaint regarding weight and folding will be entertained within 48Hrs.'
+      }
     }
   },
   
-  // Legacy fields (for backward compatibility)
+  // Legacy fields
   termsLine1: String,
   termsLine2: String,
   termsLine3: String,
@@ -292,18 +352,18 @@ const companySettingsSchema = new mongoose.Schema({
   // SIGNATURE & STAMPS
   // ============================================
   signatureImage: {
-    type: String // Base64 encoded
+    type: String
   },
   signatureText: {
     type: String,
     default: 'Authorized Signatory'
   },
   stampImage: {
-    type: String // Base64 encoded
+    type: String
   },
   
   // ============================================
-  // NOTIFICATIONS & PREFERENCES
+  // PREFERENCES
   // ============================================
   preferences: {
     defaultTaxRate: {
@@ -326,9 +386,6 @@ const companySettingsSchema = new mongoose.Schema({
     }
   },
   
-  // ============================================
-  // TIMESTAMPS
-  // ============================================
   createdAt: {
     type: Date,
     default: Date.now
@@ -342,101 +399,162 @@ const companySettingsSchema = new mongoose.Schema({
 });
 
 // ============================================
-// METHODS
+// HELPER METHODS
 // ============================================
 
-// Generate next invoice number
+companySettingsSchema.methods.getCurrentFinancialYear = function() {
+  const now = new Date();
+  const currentMonth = now.getMonth() + 1;
+  const currentYear = now.getFullYear();
+  const fyStartMonth = this.financialYear.startMonth;
+  
+  let fyStart, fyEnd;
+  
+  if (currentMonth >= fyStartMonth) {
+    fyStart = new Date(currentYear, fyStartMonth - 1, 1);
+    fyEnd = new Date(currentYear + 1, fyStartMonth - 1, 0);
+  } else {
+    fyStart = new Date(currentYear - 1, fyStartMonth - 1, 1);
+    fyEnd = new Date(currentYear, fyStartMonth - 1, 0);
+  }
+  
+  return {
+    startDate: fyStart,
+    endDate: fyEnd,
+    startYear: fyStart.getFullYear(),
+    endYear: fyEnd.getFullYear(),
+    label: `FY ${fyStart.getFullYear()}-${(fyEnd.getFullYear() % 100).toString().padStart(2, '0')}`
+  };
+};
+
+companySettingsSchema.methods.shouldResetNumberSeries = function(type) {
+  const series = this.numberSeries;
+  const resetMode = series[`${type}ResetMode`];
+  const lastReset = series[`${type}LastReset`];
+  
+  if (resetMode === 'never') return false;
+  if (resetMode === 'manual') return false;
+  
+  const now = new Date();
+  
+  if (resetMode === 'financial_year') {
+    const fy = this.getCurrentFinancialYear();
+    if (!lastReset) return true;
+    return lastReset < fy.startDate && now >= fy.startDate;
+  }
+  
+  if (resetMode === 'calendar_year') {
+    const currentYear = now.getFullYear();
+    if (!lastReset) return true;
+    const lastResetYear = lastReset.getFullYear();
+    return lastResetYear < currentYear;
+  }
+  
+  return false;
+};
+
+companySettingsSchema.methods.autoResetIfNeeded = async function() {
+  let resetOccurred = false;
+  
+  ['invoice', 'challan', 'purchase'].forEach(type => {
+    if (this.shouldResetNumberSeries(type)) {
+      this.numberSeries[`${type}CurrentNumber`] = 0;
+      this.numberSeries[`${type}LastReset`] = new Date();
+      resetOccurred = true;
+    }
+  });
+  
+  if (resetOccurred) {
+    await this.save();
+  }
+  
+  return resetOccurred;
+};
+
+companySettingsSchema.methods.getYearString = function(type, yearFormat) {
+  if (yearFormat === 'none') return '';
+  
+  const resetMode = this.numberSeries[`${type}ResetMode`];
+  
+  if (resetMode === 'financial_year') {
+    const fy = this.getCurrentFinancialYear();
+    
+    switch (yearFormat) {
+      case 'YYYY':
+        return `${fy.startYear}`;
+      case 'YY':
+        return `${(fy.startYear % 100).toString().padStart(2, '0')}`;
+      case 'YYYY-YY':
+        return `${fy.startYear}-${(fy.endYear % 100).toString().padStart(2, '0')}`;
+      default:
+        return '';
+    }
+  } else {
+    const year = new Date().getFullYear();
+    
+    switch (yearFormat) {
+      case 'YYYY':
+        return `${year}`;
+      case 'YY':
+        return `${(year % 100).toString().padStart(2, '0')}`;
+      case 'YYYY-YY':
+        const nextYear = year + 1;
+        return `${year}-${(nextYear % 100).toString().padStart(2, '0')}`;
+      default:
+        return '';
+    }
+  }
+};
+
 companySettingsSchema.methods.getNextInvoiceNumber = function() {
   const series = this.numberSeries;
   series.invoiceCurrentNumber += 1;
   
-  let number = `${series.invoicePrefix}-`;
+  let number = `${series.invoicePrefix}`;
   
-  if (series.invoiceYearFormat !== 'none') {
-    const year = new Date().getFullYear();
-    switch (series.invoiceYearFormat) {
-      case 'YYYY':
-        number += `${year}-`;
-        break;
-      case 'YY':
-        number += `${year.toString().slice(-2)}-`;
-        break;
-      case 'YYYY-YY':
-        const nextYear = year + 1;
-        number += `${year}-${nextYear.toString().slice(-2)}-`;
-        break;
-    }
+  const yearStr = this.getYearString('invoice', series.invoiceYearFormat);
+  if (yearStr) {
+    number += `-${yearStr}`;
   }
   
-  number += series.invoiceCurrentNumber.toString().padStart(4, '0');
+  number += `-${series.invoiceCurrentNumber.toString().padStart(4, '0')}`;
   return number;
 };
 
-// Generate next challan number
 companySettingsSchema.methods.getNextChallanNumber = function() {
   const series = this.numberSeries;
   series.challanCurrentNumber += 1;
   
-  let number = `${series.challanPrefix}-`;
+  let number = `${series.challanPrefix}`;
   
-  if (series.challanYearFormat !== 'none') {
-    const year = new Date().getFullYear();
-    switch (series.challanYearFormat) {
-      case 'YYYY':
-        number += `${year}-`;
-        break;
-      case 'YY':
-        number += `${year.toString().slice(-2)}-`;
-        break;
-      case 'YYYY-YY':
-        const nextYear = year + 1;
-        number += `${year}-${nextYear.toString().slice(-2)}-`;
-        break;
-    }
+  const yearStr = this.getYearString('challan', series.challanYearFormat);
+  if (yearStr) {
+    number += `-${yearStr}`;
   }
   
-  number += series.challanCurrentNumber.toString().padStart(4, '0');
+  number += `-${series.challanCurrentNumber.toString().padStart(4, '0')}`;
   return number;
 };
 
-// Generate next purchase number
 companySettingsSchema.methods.getNextPurchaseNumber = function() {
   const series = this.numberSeries;
   series.purchaseCurrentNumber += 1;
   
-  let number = `${series.purchasePrefix}-`;
+  let number = `${series.purchasePrefix}`;
   
-  if (series.purchaseYearFormat !== 'none') {
-    const year = new Date().getFullYear();
-    switch (series.purchaseYearFormat) {
-      case 'YYYY':
-        number += `${year}-`;
-        break;
-      case 'YY':
-        number += `${year.toString().slice(-2)}-`;
-        break;
-      case 'YYYY-YY':
-        const nextYear = year + 1;
-        number += `${year}-${nextYear.toString().slice(-2)}-`;
-        break;
-    }
+  const yearStr = this.getYearString('purchase', series.purchaseYearFormat);
+  if (yearStr) {
+    number += `-${yearStr}`;
   }
   
-  number += series.purchaseCurrentNumber.toString().padStart(4, '0');
+  number += `-${series.purchaseCurrentNumber.toString().padStart(4, '0')}`;
   return number;
 };
 
-// Reset yearly counters (call this on January 1st)
-companySettingsSchema.methods.resetYearlyCounters = function() {
-  if (this.numberSeries.invoiceResetYearly) {
-    this.numberSeries.invoiceCurrentNumber = 0;
-  }
-  if (this.numberSeries.challanResetYearly) {
-    this.numberSeries.challanCurrentNumber = 0;
-  }
-  if (this.numberSeries.purchaseResetYearly) {
-    this.numberSeries.purchaseCurrentNumber = 0;
-  }
+companySettingsSchema.methods.manualResetNumberSeries = function(type) {
+  const series = this.numberSeries;
+  series[`${type}CurrentNumber`] = 0;
+  series[`${type}LastReset`] = new Date();
 };
 
 // ============================================
@@ -445,7 +563,7 @@ companySettingsSchema.methods.resetYearlyCounters = function() {
 companySettingsSchema.pre('save', function(next) {
   this.updatedAt = Date.now();
   
-  // Migrate legacy terms to new structure
+  // Migrate legacy terms
   if (this.termsLine1 && !this.terms.invoice.line1) {
     this.terms.invoice.line1 = this.termsLine1;
   }

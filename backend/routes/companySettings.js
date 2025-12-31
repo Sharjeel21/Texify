@@ -5,10 +5,9 @@ const CompanySettings = require('../models/CompanySettings');
 const { initCaptcha, searchGST } = require('../gstScraper');
 
 // ============================================
-// GST Verification Routes (with CAPTCHA)
+// GST Verification Routes
 // ============================================
 
-// Initialize CAPTCHA for GST verification
 router.get('/gst/init-captcha', async (req, res) => {
   try {
     const result = await initCaptcha();
@@ -22,7 +21,6 @@ router.get('/gst/init-captcha', async (req, res) => {
   }
 });
 
-// Verify GST with CAPTCHA
 router.post('/gst/verify', async (req, res) => {
   try {
     const { sessionId, gstNumber, captcha } = req.body;
@@ -49,10 +47,10 @@ router.post('/gst/verify', async (req, res) => {
 // Company Settings Routes
 // ============================================
 
-// Get company settings
+// Get company settings with auto-reset check
 router.get('/', async (req, res) => {
   try {
-    const settings = await CompanySettings.findOne();
+    let settings = await CompanySettings.findOne();
     
     if (!settings) {
       return res.json({
@@ -61,9 +59,13 @@ router.get('/', async (req, res) => {
       });
     }
     
+    // Auto-reset number series if needed
+    await settings.autoResetIfNeeded();
+    
     res.json({
       exists: true,
-      data: settings
+      data: settings,
+      financialYear: settings.getCurrentFinancialYear()
     });
   } catch (error) {
     console.error('Error fetching company settings:', error);
@@ -93,7 +95,8 @@ router.post('/', async (req, res) => {
         invoiceFormat: req.body.invoiceFormat || {},
         challanFormat: req.body.challanFormat || {},
         terms: req.body.terms || { invoice: {}, challan: {} },
-        preferences: req.body.preferences || {}
+        preferences: req.body.preferences || {},
+        financialYear: req.body.financialYear || {}
       };
       
       settings = new CompanySettings(defaultSettings);
@@ -105,6 +108,7 @@ router.post('/', async (req, res) => {
       success: true,
       exists: true,
       data: settings,
+      financialYear: settings.getCurrentFinancialYear(),
       message: 'Company settings saved successfully'
     });
   } catch (error) {
@@ -130,24 +134,27 @@ router.patch('/', async (req, res) => {
     
     // Handle nested object updates
     if (req.body.numberSeries) {
-      settings.numberSeries = { ...settings.numberSeries, ...req.body.numberSeries };
+      settings.numberSeries = { ...settings.numberSeries.toObject(), ...req.body.numberSeries };
     }
     if (req.body.invoiceFormat) {
-      settings.invoiceFormat = { ...settings.invoiceFormat, ...req.body.invoiceFormat };
+      settings.invoiceFormat = { ...settings.invoiceFormat.toObject(), ...req.body.invoiceFormat };
     }
     if (req.body.challanFormat) {
-      settings.challanFormat = { ...settings.challanFormat, ...req.body.challanFormat };
+      settings.challanFormat = { ...settings.challanFormat.toObject(), ...req.body.challanFormat };
     }
     if (req.body.terms) {
-      settings.terms = { ...settings.terms, ...req.body.terms };
+      settings.terms = { ...settings.terms.toObject(), ...req.body.terms };
     }
     if (req.body.preferences) {
-      settings.preferences = { ...settings.preferences, ...req.body.preferences };
+      settings.preferences = { ...settings.preferences.toObject(), ...req.body.preferences };
+    }
+    if (req.body.financialYear) {
+      settings.financialYear = { ...settings.financialYear.toObject(), ...req.body.financialYear };
     }
     
     // Update other fields
     Object.keys(req.body).forEach(key => {
-      if (!['numberSeries', 'invoiceFormat', 'challanFormat', 'terms', 'preferences'].includes(key)) {
+      if (!['numberSeries', 'invoiceFormat', 'challanFormat', 'terms', 'preferences', 'financialYear'].includes(key)) {
         settings[key] = req.body[key];
       }
     });
@@ -159,6 +166,7 @@ router.patch('/', async (req, res) => {
       success: true,
       exists: true,
       data: settings,
+      financialYear: settings.getCurrentFinancialYear(),
       message: 'Company settings updated successfully'
     });
   } catch (error) {
@@ -170,7 +178,11 @@ router.patch('/', async (req, res) => {
   }
 });
 
-// Get next document numbers
+// ============================================
+// Number Series Management
+// ============================================
+
+// Get next document numbers (preview without incrementing)
 router.get('/next-numbers', async (req, res) => {
   try {
     const settings = await CompanySettings.findOne();
@@ -182,13 +194,49 @@ router.get('/next-numbers', async (req, res) => {
       });
     }
     
+    // Check if auto-reset needed
+    await settings.autoResetIfNeeded();
+    
+    // Generate preview numbers (without saving)
+    const previewInvoice = settings.getNextInvoiceNumber();
+    const previewChallan = settings.getNextChallanNumber();
+    const previewPurchase = settings.getNextPurchaseNumber();
+    
+    // Decrement back to get current state
+    settings.numberSeries.invoiceCurrentNumber -= 1;
+    settings.numberSeries.challanCurrentNumber -= 1;
+    settings.numberSeries.purchaseCurrentNumber -= 1;
+    
     res.json({
       success: true,
       data: {
-        nextInvoice: settings.getNextInvoiceNumber(),
-        nextChallan: settings.getNextChallanNumber(),
-        nextPurchase: settings.getNextPurchaseNumber()
-      }
+        nextInvoice: previewInvoice,
+        nextChallan: previewChallan,
+        nextPurchase: previewPurchase,
+        currentNumbers: {
+          invoice: settings.numberSeries.invoiceCurrentNumber,
+          challan: settings.numberSeries.challanCurrentNumber,
+          purchase: settings.numberSeries.purchaseCurrentNumber
+        },
+        resetInfo: {
+          invoice: {
+            mode: settings.numberSeries.invoiceResetMode,
+            lastReset: settings.numberSeries.invoiceLastReset,
+            shouldReset: settings.shouldResetNumberSeries('invoice')
+          },
+          challan: {
+            mode: settings.numberSeries.challanResetMode,
+            lastReset: settings.numberSeries.challanLastReset,
+            shouldReset: settings.shouldResetNumberSeries('challan')
+          },
+          purchase: {
+            mode: settings.numberSeries.purchaseResetMode,
+            lastReset: settings.numberSeries.purchaseLastReset,
+            shouldReset: settings.shouldResetNumberSeries('purchase')
+          }
+        }
+      },
+      financialYear: settings.getCurrentFinancialYear()
     });
   } catch (error) {
     console.error('Error getting next numbers:', error);
@@ -199,7 +247,7 @@ router.get('/next-numbers', async (req, res) => {
   }
 });
 
-// Increment and get next invoice number
+// Generate and increment invoice number
 router.post('/generate-invoice-number', async (req, res) => {
   try {
     const settings = await CompanySettings.findOne();
@@ -210,6 +258,8 @@ router.post('/generate-invoice-number', async (req, res) => {
         error: 'Company settings not found'
       });
     }
+    
+    await settings.autoResetIfNeeded();
     
     const number = settings.getNextInvoiceNumber();
     await settings.save();
@@ -227,7 +277,7 @@ router.post('/generate-invoice-number', async (req, res) => {
   }
 });
 
-// Increment and get next challan number
+// Generate and increment challan number
 router.post('/generate-challan-number', async (req, res) => {
   try {
     const settings = await CompanySettings.findOne();
@@ -238,6 +288,8 @@ router.post('/generate-challan-number', async (req, res) => {
         error: 'Company settings not found'
       });
     }
+    
+    await settings.autoResetIfNeeded();
     
     const number = settings.getNextChallanNumber();
     await settings.save();
@@ -255,7 +307,7 @@ router.post('/generate-challan-number', async (req, res) => {
   }
 });
 
-// Increment and get next purchase number
+// Generate and increment purchase number
 router.post('/generate-purchase-number', async (req, res) => {
   try {
     const settings = await CompanySettings.findOne();
@@ -266,6 +318,8 @@ router.post('/generate-purchase-number', async (req, res) => {
         error: 'Company settings not found'
       });
     }
+    
+    await settings.autoResetIfNeeded();
     
     const number = settings.getNextPurchaseNumber();
     await settings.save();
@@ -283,8 +337,66 @@ router.post('/generate-purchase-number', async (req, res) => {
   }
 });
 
-// Reset yearly counters (to be called by a cron job on Jan 1st)
-router.post('/reset-yearly-counters', async (req, res) => {
+// Manual reset number series
+router.post('/reset-number-series', async (req, res) => {
+  try {
+    const { type } = req.body; // 'invoice', 'challan', 'purchase', or 'all'
+    
+    if (!type || !['invoice', 'challan', 'purchase', 'all'].includes(type)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid type. Must be invoice, challan, purchase, or all'
+      });
+    }
+    
+    const settings = await CompanySettings.findOne();
+    
+    if (!settings) {
+      return res.status(404).json({
+        success: false,
+        error: 'Company settings not found'
+      });
+    }
+    
+    // Store backup info before reset
+    const backup = {
+      invoice: settings.numberSeries.invoiceCurrentNumber,
+      challan: settings.numberSeries.challanCurrentNumber,
+      purchase: settings.numberSeries.purchaseCurrentNumber,
+      resetDate: new Date()
+    };
+    
+    if (type === 'all') {
+      settings.manualResetNumberSeries('invoice');
+      settings.manualResetNumberSeries('challan');
+      settings.manualResetNumberSeries('purchase');
+    } else {
+      settings.manualResetNumberSeries(type);
+    }
+    
+    await settings.save();
+    
+    res.json({
+      success: true,
+      message: `Number series reset successfully for: ${type}`,
+      backup,
+      newNumbers: {
+        invoice: settings.numberSeries.invoiceCurrentNumber,
+        challan: settings.numberSeries.challanCurrentNumber,
+        purchase: settings.numberSeries.purchaseCurrentNumber
+      }
+    });
+  } catch (error) {
+    console.error('Error resetting number series:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// Get financial year info
+router.get('/financial-year', async (req, res) => {
   try {
     const settings = await CompanySettings.findOne();
     
@@ -295,15 +407,14 @@ router.post('/reset-yearly-counters', async (req, res) => {
       });
     }
     
-    settings.resetYearlyCounters();
-    await settings.save();
+    const fyInfo = settings.getCurrentFinancialYear();
     
     res.json({
       success: true,
-      message: 'Yearly counters reset successfully'
+      data: fyInfo
     });
   } catch (error) {
-    console.error('Error resetting yearly counters:', error);
+    console.error('Error getting financial year:', error);
     res.status(500).json({
       success: false,
       error: error.message
@@ -311,7 +422,7 @@ router.post('/reset-yearly-counters', async (req, res) => {
   }
 });
 
-// Delete company settings (optional - for testing)
+// Delete company settings (for testing)
 router.delete('/', async (req, res) => {
   try {
     await CompanySettings.deleteOne({});

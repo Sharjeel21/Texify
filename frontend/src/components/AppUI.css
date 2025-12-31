@@ -1577,6 +1577,7 @@ table tbody tr:last-child td {
   background: linear-gradient(135deg, #ffffff 0%, #fefce8 100%);
   border-radius: var(--border-radius) var(--border-radius) 0 0;
   padding: 0.5rem 0.5rem 0 0.5rem;
+  overflow-x: auto;
 }
 
 .tab {
@@ -1591,6 +1592,7 @@ table tbody tr:last-child td {
   margin-bottom: -3px;
   transition: all 0.3s ease;
   border-radius: var(--border-radius) var(--border-radius) 0 0;
+  white-space: nowrap;
 }
 
 .tab:hover {
@@ -2669,5 +2671,224 @@ table tbody tr:last-child td {
 }
 
 /* ==========================================
-   END OF STYLESHEET
+   COMPANY SETTINGS & CONFIGURATION
    ========================================== */
+.company-settings-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding-bottom: 4rem;
+}
+
+.header-flex {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+}
+
+/* Tab Configuration - Specific overrides for Settings Page */
+.settings-tabs {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 2rem;
+  border-bottom: 2px solid var(--border-color);
+  overflow-x: auto;
+  padding-bottom: 1px;
+}
+
+.tab-button {
+  padding: 0.75rem 1.5rem;
+  background: none;
+  border: none;
+  border-bottom: 3px solid transparent;
+  font-weight: 600;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.tab-button:hover {
+  color: var(--primary-color);
+  background: var(--bg-accent);
+}
+
+.tab-button.active {
+  color: var(--primary-color);
+  border-bottom-color: var(--primary-color);
+}
+
+/* Preview Boxes */
+.preview-box {
+  margin-top: 1rem;
+  padding: 1rem;
+  background: var(--bg-accent);
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius);
+  color: var(--text-brown);
+  font-weight: 500;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.preview-number {
+  font-family: monospace;
+  font-size: 1.2em;
+  font-weight: bold;
+  color: var(--primary-color);
+  background: white;
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  border: 1px solid var(--border-color);
+}
+
+/* Font Control Panel */
+.font-control-panel {
+  background: var(--bg-main);
+  padding: 1.25rem;
+  border-radius: var(--border-radius);
+  border: 1px solid var(--border-secondary);
+  margin-bottom: 1rem;
+}
+
+.panel-subtitle {
+  margin: 0 0 1rem 0;
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-secondary);
+  font-weight: 700;
+}
+
+.control-group {
+  margin-bottom: 1rem;
+}
+
+.input-group {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.input-group input {
+  flex: 1;
+}
+
+.input-group select {
+  flex: 2;
+}
+
+/* Checkbox Grid */
+.checkbox-grid, 
+.checkbox-group {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.checkbox-label,
+.checkbox-group label {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  border: 1px solid var(--border-secondary);
+  border-radius: var(--border-radius);
+  cursor: pointer;
+  transition: all 0.2s;
+  background: var(--bg-card);
+}
+
+.checkbox-label:hover,
+.checkbox-group label:hover {
+  background: var(--bg-accent);
+  border-color: var(--border-color);
+}
+
+.checkbox-label input[type="checkbox"],
+.checkbox-group label input[type="checkbox"] {
+  width: 1.1rem;
+  height: 1.1rem;
+  cursor: pointer;
+  accent-color: var(--primary-color);
+}
+
+/* Logo Upload Area */
+.logo-upload-section {
+  display: flex;
+  justify-content: center;
+  padding: 1.5rem;
+  border: 2px dashed var(--border-color);
+  border-radius: var(--border-radius);
+  background: var(--bg-main);
+  margin-bottom: 1.5rem;
+}
+
+.preview-container {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: center;
+}
+
+.logo-preview {
+  max-height: 150px;
+  max-width: 100%;
+  border: 2px solid var(--border-secondary);
+  border-radius: var(--border-radius);
+  padding: 5px;
+  background: #fff;
+  box-shadow: var(--shadow-sm);
+}
+
+/* Sticky Action Bar */
+.action-bar {
+  position: sticky;
+  bottom: 0;
+  background: var(--bg-card);
+  padding: 1rem;
+  border-top: 2px solid var(--border-color);
+  margin: 0 -1rem -1rem -1rem; /* Negative margins to flush with card padding if used inside card, or container */
+  text-align: right;
+  box-shadow: 0 -4px 10px rgba(0,0,0,0.05);
+  z-index: 10;
+  display: flex;
+  justify-content: flex-end;
+  gap: 1rem;
+}
+
+.btn-save {
+  background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+  color: white;
+  padding: 0.8rem 2rem;
+  border-radius: var(--border-radius);
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  font-size: 1rem;
+  transition: all 0.2s;
+  box-shadow: var(--shadow-sm);
+}
+
+.btn-save:hover {
+  background: linear-gradient(135deg, #16a34a 0%, #15803d 100%);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+/* Captcha Display */
+.captcha-display {
+  margin: 1rem 0;
+  text-align: center;
+  background: var(--bg-main);
+  padding: 1rem;
+  border-radius: var(--border-radius);
+  border: 1px solid var(--border-secondary);
+}
+
+.captcha-display img {
+  max-width: 100%;
+  height: auto;
+  cursor: pointer;
+}

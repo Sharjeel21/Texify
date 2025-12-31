@@ -1,20 +1,8 @@
-//frontend/src/pages/api/js
+// frontend/src/services/api.js
 import axios from 'axios';
 
-// ✅ Auto-detect API Base URL (works for localhost, VS Code Port Forwarding, and DevTunnels)
 const getAPIBaseURL = () => {
   const hostname = window.location.hostname;
-
-  // // // 1️⃣ If running through VS Code DevTunnel (HTTPS)
-  // if (hostname.includes('devtunnels.ms')) {
-  //   // Replace frontend port (3000) with backend port (5000)
-  //   return `https://${hostname.replace('3000', '5000')}/api`;
-  // }
-
-  // // 2️⃣ Environment variable override (optional)
-  // if (process.env.REACT_APP_API_URL) {
-  //   return process.env.REACT_APP_API_URL;
-  // }
 
   // 3️⃣ Localhost
   if (hostname === 'localhost' || hostname === '127.0.0.1') {
@@ -39,10 +27,52 @@ const api = axios.create({
 });
 
 // ============================================
-// Company Settings APIs ✅ ENHANCED
+// Request Interceptor - Add Auth Token
+// ============================================
+api.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
+
+// ============================================
+// Response Interceptor - Handle Auth Errors
+// ============================================
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      // Token expired or invalid
+      localStorage.removeItem('token');
+      window.location.href = '/login';
+    }
+    return Promise.reject(error);
+  }
+);
+
+// ============================================
+// Authentication APIs
+// ============================================
+export const authAPI = {
+  login: (data) => api.post('/auth/login', data),
+  register: (data) => api.post('/auth/register', data),
+  me: () => api.get('/auth/me'),
+  updateProfile: (data) => api.put('/auth/update-profile', data),
+  changePassword: (data) => api.put('/auth/change-password', data),
+  verifyToken: (token) => api.post('/auth/verify-token', { token }),
+};
+
+// ============================================
+// Company Settings APIs
 // ============================================
 export const companySettingsAPI = {
-  // Existing methods
   get: () => api.get('/company-settings'),
   initCaptcha: () => api.get('/company-settings/gst/init-captcha'),
   verifyGST: (data) => api.post('/company-settings/gst/verify', data),
@@ -50,16 +80,19 @@ export const companySettingsAPI = {
   update: (data) => api.patch('/company-settings', data),
   delete: () => api.delete('/company-settings'),
   
-  // NEW - Document Number Generation
+  // Number Series Management
   getNextNumbers: () => api.get('/company-settings/next-numbers'),
   generateInvoiceNumber: () => api.post('/company-settings/generate-invoice-number'),
   generateChallanNumber: () => api.post('/company-settings/generate-challan-number'),
   generatePurchaseNumber: () => api.post('/company-settings/generate-purchase-number'),
-  resetYearlyCounters: () => api.post('/company-settings/reset-yearly-counters'),
+  resetNumberSeries: (type) => api.post('/company-settings/reset-number-series', { type }),
+  
+  // Financial Year Info
+  getFinancialYear: () => api.get('/company-settings/financial-year'),
 };
 
 // ============================================
-// Quality APIs ✅
+// Quality APIs
 // ============================================
 export const qualityAPI = {
   getAll: () => api.get('/qualities'),
@@ -69,10 +102,10 @@ export const qualityAPI = {
 };
 
 // ============================================
-// Party APIs ✅ ENHANCED
+// Party APIs
 // ============================================
 export const partyAPI = {
-  getAll: (params) => api.get('/parties', { params }), // Added params support
+  getAll: (params) => api.get('/parties', { params }),
   initCaptcha: () => api.get('/parties/gst/init-captcha'),
   verifyGST: (data) => api.post('/parties/gst/verify', data),
   create: (data) => api.post('/parties', data),
@@ -81,7 +114,7 @@ export const partyAPI = {
 };
 
 // ============================================
-// Delivery Challan APIs ✅
+// Delivery Challan APIs
 // ============================================
 export const deliveryChallanAPI = {
   getAll: () => api.get('/delivery-challans'),
@@ -98,14 +131,14 @@ export const deliveryChallanAPI = {
 };
 
 // ============================================
-// Stock APIs ✅
+// Stock APIs
 // ============================================
 export const stockAPI = {
   getByQuality: (qualityId) => api.get(`/stock/${qualityId}`),
 };
 
 // ============================================
-// Tax Invoice APIs ✅
+// Tax Invoice APIs
 // ============================================
 export const taxInvoiceAPI = {
   getAll: () => api.get('/tax-invoices'),
@@ -116,7 +149,7 @@ export const taxInvoiceAPI = {
 };
 
 // ============================================
-// Deal APIs ✅
+// Deal APIs
 // ============================================
 export const dealAPI = {
   getAll: (params) => api.get('/deals', { params }),
@@ -131,7 +164,7 @@ export const dealAPI = {
 };
 
 // ============================================
-// Yarn Type APIs ✅ NEW
+// Yarn Type APIs
 // ============================================
 export const yarnTypeAPI = {
   getAll: (params) => api.get('/yarn-types', { params }),
@@ -142,10 +175,9 @@ export const yarnTypeAPI = {
 };
 
 // ============================================
-// Purchase APIs ✅ ENHANCED FOR NEW SYSTEM
+// Purchase APIs
 // ============================================
 export const purchaseAPI = {
-  // Keep old endpoints for backward compatibility
   getAll: (params) => api.get('/purchases', { params }),
   getById: (id) => api.get(`/purchases/${id}`),
   getByStatus: (status) => api.get(`/purchases/by-status/${status}`),
@@ -156,28 +188,27 @@ export const purchaseAPI = {
   reopen: (id) => api.post(`/purchases/${id}/reopen`),
   delete: (id) => api.delete(`/purchases/${id}`),
   
-  // NEW - Enhanced Purchase Management System
-  // These work with the new /purchase routes
+  // Enhanced Purchase Management System
   getAllNew: (params) => api.get('/purchase', { params }),
   getByIdNew: (id) => api.get(`/purchase/${id}`),
   createNew: (data) => api.post('/purchase', data),
   updateNew: (id, data) => api.put(`/purchase/${id}`, data),
   deleteNew: (id) => api.delete(`/purchase/${id}`),
   
-  // NEW - Delivery Management
+  // Delivery Management
   addDelivery: (purchaseId, data) => api.post(`/purchase/${purchaseId}/delivery`, data),
   getDeliveriesNew: (purchaseId) => api.get(`/purchase/${purchaseId}/deliveries`),
   
-  // NEW - Payment Management
+  // Payment Management
   recordPayment: (purchaseId, data) => api.post(`/purchase/${purchaseId}/payment`, data),
   getPayments: (purchaseId) => api.get(`/purchase/${purchaseId}/payments`),
   
-  // NEW - Reports
+  // Reports
   getPaymentDueReport: () => api.get('/purchase/reports/payment-due'),
 };
 
 // ============================================
-// Purchase Delivery APIs ✅
+// Purchase Delivery APIs
 // ============================================
 export const purchaseDeliveryAPI = {
   getAll: () => api.get('/purchase-deliveries'),
@@ -191,7 +222,7 @@ export const purchaseDeliveryAPI = {
 };
 
 // ============================================
-// Payment APIs ✅ NEW
+// Payment APIs
 // ============================================
 export const paymentAPI = {
   getAll: () => api.get('/payments'),

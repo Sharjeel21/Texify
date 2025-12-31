@@ -1,4 +1,3 @@
-// frontend/src/pages/VeiwInvoices.js
 import React, { useState, useEffect, useRef } from 'react';
 import { taxInvoiceAPI, companySettingsAPI } from '../services/api';
 import { useReactToPrint } from 'react-to-print';
@@ -155,13 +154,47 @@ function ViewInvoices() {
 
     const totals = calculateTotals(invoice);
     const baleRows = extractBales(invoice);
-    const hasLogo = companySettings?.logo;
+    
+    // Extract all settings with proper defaults
+    const format = companySettings?.invoiceFormat || {};
+    
+    // Display settings
+    const showLogo = format.showLogo !== false;
+    const logoPosition = format.logoPosition || 'left';
+    const showBankDetails = format.showBankDetails !== false;
+    const showTerms = format.showTerms !== false;
+    
+    // Typography settings
+    const fontFamily = format.fontFamily || 'Segoe UI';
+    const fontWeight = format.fontWeight || 'normal';
+    const baseFontSize = format.fontSize?.base || 11;
+    const companyNameSize = format.fontSize?.companyName || 48;
+    const headingSize = format.fontSize?.heading || 12;
+    
+    // Color mode
+    const colorMode = format.colorMode || 'color';
+    const isBlackWhite = colorMode === 'black_white';
+    
+    // Dynamic colors based on mode
+    const textColor = isBlackWhite ? '#000000' : '#212529';
+    const headerBg = isBlackWhite ? '#ffffff' : '#f8f9fa';
+    const tableBg = isBlackWhite ? '#f5f5f5' : '#e9ecef';
+    const lightBg = isBlackWhite ? '#ffffff' : '#f8f9fa';
+    const borderColor = isBlackWhite ? '#000000' : '#333333';
+    const mutedText = isBlackWhite ? '#000000' : '#6c757d';
+    const companyNameColor = isBlackWhite ? '#000000' : '#2c3e50';
+    
+    const hasLogo = showLogo && companySettings?.logo;
 
+    // Base cell style with applied settings
     const cellStyle = {
-      border: '1px solid #666',
+      border: `1px solid ${borderColor}`,
       padding: '4px 7px',
-      fontSize: '11px',
-      lineHeight: '1.2'
+      fontSize: `${baseFontSize}px`,
+      lineHeight: '1.2',
+      fontFamily: fontFamily,
+      fontWeight: fontWeight,
+      color: textColor
     };
 
     return (
@@ -171,470 +204,642 @@ function ViewInvoices() {
         margin: '0 auto',
         background: 'white',
         boxSizing: 'border-box',
-        padding: '0'
+        padding: '0',
+        fontFamily: fontFamily,
+        color: textColor
       }}>
         <div style={{
-          border: '2px solid #333',
+          border: `2px solid ${borderColor}`,
           width: '100%',
           height: '100%',
           boxSizing: 'border-box',
-          fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
           borderRadius: '8px',
           overflow: 'hidden',
           display: 'flex',
           flexDirection: 'column'
         }}>
           
-          {/* COMPANY NAME & ADDRESS - WITH OR WITHOUT LOGO */}
+          {/* HEADER with Logo */}
           <div style={{
-            borderBottom: '2px solid #333',
+            borderBottom: `2px solid ${borderColor}`,
             padding: '8px 10px 10px',
-            background: '#f8f9fa',
+            background: headerBg,
             position: 'relative'
           }}>
-            {/* Logo Section - Only show if logo exists - Positioned absolutely on left */}
+            {/* Logo - positioned based on settings */}
             {hasLogo && (
               <div style={{
                 position: 'absolute',
-                left: '20px',
+                left: logoPosition === 'left' ? '20px' : logoPosition === 'right' ? 'auto' : '50%',
+                right: logoPosition === 'right' ? '20px' : 'auto',
                 top: '50%',
-                transform: 'translateY(-50%)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center'
+                transform: logoPosition === 'center' ? 'translate(-50%, -50%)' : 'translateY(-50%)'
               }}>
                 <img 
                   src={companySettings.logo} 
-                  alt="Company Logo" 
-                  style={{
-                    maxWidth: '90px',
-                    maxHeight: '90px',
-                    objectFit: 'contain'
-                  }}
-                  onError={(e) => {
-                    e.target.style.display = 'none';
+                  alt="Logo" 
+                  style={{ 
+                    maxWidth: '90px', 
+                    maxHeight: '90px', 
+                    objectFit: 'contain',
+                    filter: isBlackWhite ? 'grayscale(100%)' : 'none'
                   }}
                 />
               </div>
             )}
             
-            {/* Company Details Section - Always centered */}
+            {/* Company details - centered with padding for logo */}
             <div style={{
               textAlign: 'center',
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center',
-              paddingLeft: hasLogo ? '110px' : '0',
-              paddingRight: hasLogo ? '110px' : '0'
+              paddingLeft: hasLogo && logoPosition === 'left' ? '110px' : '0',
+              paddingRight: hasLogo && logoPosition === 'right' ? '110px' : '0'
             }}>
-              {/* TAX INVOICE - Smaller, underlined, italic */}
-              <div style={{
-                marginTop: '8px',
-                fontSize: '11px',
-                fontWeight: '500',
-                fontStyle: 'italic',
-                textDecoration: 'underline',
-                letterSpacing: '0.5px',
-                color: '#6c757d'
-              }}>Tax Invoice</div>
+              <div style={{ 
+                fontSize: `${baseFontSize}px`, 
+                fontStyle: 'italic', 
+                textDecoration: 'underline', 
+                color: mutedText
+              }}>
+                Tax Invoice
+              </div>
               
-              <div style={{
-                fontSize: '48px',
-                fontWeight: 'bold',
-                letterSpacing: '10px',
-                fontFamily: 'Georgia, serif',
-                marginBottom: '6px',
-                color: '#2c3e50'
+              <div style={{ 
+                fontSize: `${companyNameSize}px`, 
+                fontWeight: 'bold', 
+                letterSpacing: '10px', 
+                fontFamily: 'Georgia, serif', 
+                color: companyNameColor,
+                lineHeight: '1.1',
+                marginBottom: '3px'
               }}>
                 {companySettings?.companyName || 'S S FABRICS'}
               </div>
               
-              <div style={{ fontSize: '11px', marginBottom: '2px', color: '#495057' }}>
-                {companySettings?.address || 'S. No. 133, P. No. 107, Golden Nagar, Malegaon - 423203 (Nasik)'}
+              <div style={{ fontSize: `${baseFontSize}px`, color: textColor }}>
+                {companySettings?.address}
               </div>
               
-              <div style={{ fontSize: '11px', marginBottom: '2px', color: '#495057' }}>
-                Mobile No. {companySettings?.mobile || '9823671261'}
+              <div style={{ fontSize: `${baseFontSize}px`, color: textColor }}>
+                Mobile: {companySettings?.mobile}
               </div>
               
-              <div style={{ fontSize: '10px', marginTop: '6px', color: '#6c757d', fontStyle: 'italic' }}>
+              <div style={{ 
+                fontSize: `${baseFontSize - 1}px`, 
+                fontStyle: 'italic', 
+                color: mutedText,
+                marginTop: '2px'
+              }}>
                 Subject to {companySettings?.city} Jurisdiction
               </div>
             </div>
           </div>
 
-          {/* INVOICE & TRANSPORT DETAILS */}
-          <table style={{ width: '100%', borderCollapse: 'collapse', borderBottom: '2px solid #333' }}>
+          {/* Invoice Details */}
+          <table style={{ width: '100%', borderCollapse: 'collapse', borderBottom: `2px solid ${borderColor}` }}>
             <tbody>
               <tr>
-                <td style={{...cellStyle, width: '15%', fontWeight: 'bold', background: '#f8f9fa'}}>Reverso:</td>
-                <td style={{...cellStyle, width: '35%', borderRight: '2px solid #333'}}></td>
-                <td style={{...cellStyle, width: '15%', fontWeight: 'bold', background: '#f8f9fa'}}>Transport Name:</td>
+                <td style={{...cellStyle, width: '15%', fontWeight: 'bold', background: lightBg}}>Invoice No.:</td>
+                <td style={{...cellStyle, width: '35%', fontWeight: 'bold', borderRight: `2px solid ${borderColor}`}}>
+                  {invoice.billNumber}
+                </td>
+                <td style={{...cellStyle, width: '15%', fontWeight: 'bold', background: lightBg}}>Transport:</td>
                 <td style={{...cellStyle, width: '35%'}}></td>
               </tr>
               <tr>
-                <td style={{...cellStyle, fontWeight: 'bold', background: '#f8f9fa'}}>Invoice No.:</td>
-                <td style={{...cellStyle, fontWeight: 'bold', borderRight: '2px solid #333'}}>{invoice.billNumber}</td>
-                <td style={{...cellStyle, fontWeight: 'bold', background: '#f8f9fa'}}>Vehicle No.:</td>
-                <td style={{...cellStyle}}></td>
-              </tr>
-              <tr>
-                <td style={{...cellStyle, fontWeight: 'bold', background: '#f8f9fa'}}>Invoice Date:</td>
-                <td style={{...cellStyle, fontWeight: 'bold', borderRight: '2px solid #333'}}>
-                  {new Date(invoice.date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
+                <td style={{...cellStyle, fontWeight: 'bold', background: lightBg}}>Date:</td>
+                <td style={{...cellStyle, fontWeight: 'bold', borderRight: `2px solid ${borderColor}`}}>
+                  {new Date(invoice.date).toLocaleDateString('en-GB')}
                 </td>
-                <td style={{...cellStyle, fontWeight: 'bold', background: '#f8f9fa'}}>L.R. No. & Date:</td>
+                <td style={{...cellStyle, fontWeight: 'bold', background: lightBg}}>Vehicle No.:</td>
                 <td style={{...cellStyle}}></td>
               </tr>
               <tr>
-                <td style={{...cellStyle, fontWeight: 'bold', background: '#f8f9fa'}}>State:</td>
-                <td style={{...cellStyle, fontWeight: 'bold', borderRight: '2px solid #333'}}>
-                  {companySettings?.state || 'Maharashtra'}
-                  <span style={{ float: 'right', borderLeft: '1px solid #666', paddingLeft: '10px', marginLeft: '10px' }}>
-                    Code: <b>{companySettings?.stateCode || '27'}</b>
+                <td style={{...cellStyle, fontWeight: 'bold', background: lightBg}}>State:</td>
+                <td style={{...cellStyle, fontWeight: 'bold', borderRight: `2px solid ${borderColor}`}}>
+                  {companySettings?.state}
+                  <span style={{ float: 'right', borderLeft: `1px solid ${borderColor}`, paddingLeft: '10px' }}>
+                    Code: <b>{companySettings?.stateCode}</b>
                   </span>
                 </td>
-                <td style={{...cellStyle, fontWeight: 'bold', background: '#f8f9fa'}}>Despatch To:</td>
+                <td style={{...cellStyle, fontWeight: 'bold', background: lightBg}}>L.R. No.:</td>
                 <td style={{...cellStyle}}></td>
               </tr>
               <tr>
-                <td style={{...cellStyle, fontWeight: 'bold', background: '#f8f9fa'}}>GSTIN:</td>
-                <td style={{...cellStyle, fontWeight: 'bold', borderRight: '2px solid #333'}}>{companySettings?.gstNumber || '27AKTPS4299Q1ZN'}</td>
-                <td style={{...cellStyle, fontWeight: 'bold', background: '#f8f9fa'}}>Place of Supply:</td>
+                <td style={{...cellStyle, fontWeight: 'bold', background: lightBg}}>GSTIN:</td>
+                <td style={{...cellStyle, fontWeight: 'bold', borderRight: `2px solid ${borderColor}`}}>
+                  {companySettings?.gstNumber}
+                </td>
+                <td style={{...cellStyle, fontWeight: 'bold', background: lightBg}}>Despatch To:</td>
                 <td style={{...cellStyle}}></td>
               </tr>
             </tbody>
           </table>
 
-          {/* BUYER & CONSIGNEE */}
-          <table style={{ width: '100%', borderCollapse: 'collapse', borderBottom: '2px solid #333' }}>
+          {/* Party Details */}
+          <table style={{ width: '100%', borderCollapse: 'collapse', borderBottom: `2px solid ${borderColor}` }}>
             <tbody>
               <tr>
-                <td colSpan="2" style={{...cellStyle, fontWeight: 'bold', textAlign: 'center', borderRight: '2px solid #333', fontSize: '11px', background: '#e9ecef', color: '#2c3e50', padding: '6px'}}>
-                  Name & Address of Buyer
+                <td colSpan="2" style={{
+                  ...cellStyle, 
+                  fontWeight: 'bold', 
+                  fontSize: `${headingSize}px`,
+                  textAlign: 'center', 
+                  borderRight: `2px solid ${borderColor}`, 
+                  background: tableBg, 
+                  padding: '6px'
+                }}>
+                  Buyer Details
                 </td>
-                <td colSpan="2" style={{...cellStyle, fontWeight: 'bold', textAlign: 'center', fontSize: '11px', background: '#e9ecef', color: '#2c3e50', padding: '6px'}}>
-                  Name & Address of Consignee
+                <td colSpan="2" style={{
+                  ...cellStyle, 
+                  fontWeight: 'bold',
+                  fontSize: `${headingSize}px`, 
+                  textAlign: 'center', 
+                  background: tableBg, 
+                  padding: '6px'
+                }}>
+                  Consignee Details
                 </td>
               </tr>
               <tr>
-                <td style={{...cellStyle, width: '15%', fontWeight: 'bold', background: '#f8f9fa'}}>Name:</td>
-                <td style={{...cellStyle, width: '35%', fontWeight: 'bold', borderRight: '2px solid #333'}}>{invoice.partyDetails?.name}</td>
-                <td style={{...cellStyle, width: '15%', fontWeight: 'bold', background: '#f8f9fa'}}>Name:</td>
+                <td style={{...cellStyle, width: '15%', fontWeight: 'bold', background: lightBg}}>Name:</td>
+                <td style={{...cellStyle, width: '35%', fontWeight: 'bold', borderRight: `2px solid ${borderColor}`}}>
+                  {invoice.partyDetails?.name}
+                </td>
+                <td style={{...cellStyle, width: '15%', fontWeight: 'bold', background: lightBg}}>Name:</td>
                 <td style={{...cellStyle, width: '35%'}}></td>
               </tr>
               <tr>
-                <td style={{...cellStyle, fontWeight: 'bold', verticalAlign: 'top', background: '#f8f9fa'}}>Address:</td>
-                <td style={{...cellStyle, borderRight: '2px solid #333', minHeight: '45px'}}>{invoice.partyDetails?.address}</td>
-                <td style={{...cellStyle, fontWeight: 'bold', verticalAlign: 'top', background: '#f8f9fa'}}>Address:</td>
+                <td style={{...cellStyle, fontWeight: 'bold', verticalAlign: 'top', background: lightBg}}>Address:</td>
+                <td style={{...cellStyle, borderRight: `2px solid ${borderColor}`, minHeight: '45px'}}>
+                  {invoice.partyDetails?.address}
+                </td>
+                <td style={{...cellStyle, fontWeight: 'bold', verticalAlign: 'top', background: lightBg}}>Address:</td>
                 <td style={{...cellStyle}}></td>
               </tr>
               <tr>
-                <td style={{...cellStyle, fontWeight: 'bold', background: '#f8f9fa'}}>GSTIN:</td>
-                <td style={{...cellStyle, fontWeight: 'bold', borderRight: '2px solid #333'}}>{invoice.partyDetails?.gstNumber}</td>
-                <td style={{...cellStyle, fontWeight: 'bold', background: '#f8f9fa'}}>GSTIN:</td>
+                <td style={{...cellStyle, fontWeight: 'bold', background: lightBg}}>GSTIN:</td>
+                <td style={{...cellStyle, fontWeight: 'bold', borderRight: `2px solid ${borderColor}`}}>
+                  {invoice.partyDetails?.gstNumber}
+                </td>
+                <td style={{...cellStyle, fontWeight: 'bold', background: lightBg}}>GSTIN:</td>
                 <td style={{...cellStyle}}></td>
               </tr>
               <tr>
-                <td style={{...cellStyle, fontWeight: 'bold', background: '#f8f9fa'}}>State:</td>
-                <td style={{...cellStyle, fontWeight: 'bold', borderRight: '2px solid #333'}}>
-                  {invoice.partyDetails?.state || 'MAHARASHTRA'}
-                  <span style={{ float: 'right', borderLeft: '1px solid #666', paddingLeft: '10px', marginLeft: '10px' }}>
-                    Code: <b>{invoice.partyDetails?.stateCode || '27'}</b>
+                <td style={{...cellStyle, fontWeight: 'bold', background: lightBg}}>State:</td>
+                <td style={{...cellStyle, fontWeight: 'bold', borderRight: `2px solid ${borderColor}`}}>
+                  {invoice.partyDetails?.state}
+                  <span style={{ float: 'right', borderLeft: `1px solid ${borderColor}`, paddingLeft: '10px' }}>
+                    Code: <b>{invoice.partyDetails?.stateCode}</b>
                   </span>
                 </td>
-                <td style={{...cellStyle, fontWeight: 'bold', background: '#f8f9fa'}}>State:</td>
-                <td style={{...cellStyle}}>
-                  <span style={{ float: 'right', borderLeft: '1px solid #666', paddingLeft: '10px', width:'70px' }}>Code:</span>
-                </td>
+                <td style={{...cellStyle, fontWeight: 'bold', background: lightBg}}>State:</td>
+                <td style={{...cellStyle}}></td>
               </tr>
             </tbody>
           </table>
 
-          {/* ITEMS TABLE */}
+          {/* Items Table - UPDATED WITH BORDERLESS ROWS */}
           <table style={{ width: '100%', borderCollapse: 'collapse', flex: '1' }}>
             <thead>
-              <tr style={{ borderBottom: '2px solid #333', background: '#e9ecef' }}>
-                <th style={{...cellStyle, width: '28%', fontWeight: 'bold', textAlign: 'center', fontSize: '11px', color: '#2c3e50', padding: '8px'}}>Description of Goods</th>
-                <th style={{...cellStyle, width: '14%', fontWeight: 'bold', textAlign: 'center', fontSize: '11px', color: '#2c3e50', borderLeft: '1px solid #666', padding: '8px'}}>Bale Nos.</th>
-                <th style={{...cellStyle, width: '15%', fontWeight: 'bold', textAlign: 'center', fontSize: '11px', color: '#2c3e50', borderLeft: '1px solid #666', padding: '8px'}}>No. of Pieces</th>
-                <th style={{...cellStyle, width: '14%', fontWeight: 'bold', textAlign: 'center', fontSize: '11px', color: '#2c3e50', borderLeft: '1px solid #666', padding: '8px'}}>Metres</th>
-                <th style={{...cellStyle, width: '14%', fontWeight: 'bold', textAlign: 'center', fontSize: '11px', color: '#2c3e50', borderLeft: '1px solid #666', padding: '8px'}}>Rate/Mtr</th>
-                <th style={{...cellStyle, width: '15%', fontWeight: 'bold', textAlign: 'center', fontSize: '11px', color: '#2c3e50', borderLeft: '1px solid #666', padding: '8px'}}>Amount</th>
+              <tr style={{ borderBottom: `2px solid ${borderColor}`, background: tableBg }}>
+                <th style={{
+                  borderLeft: 'none',
+                  borderRight: `1px solid ${borderColor}`,
+                  borderTop: 'none',
+                  borderBottom: `2px solid ${borderColor}`,
+                  padding: '6px 7px',
+                  fontSize: `${headingSize}px`,
+                  fontFamily: fontFamily,
+                  fontWeight: 'bold',
+                  textAlign: 'center',
+                  color: textColor,
+                  width: '28%'
+                }}>Description</th>
+                <th style={{
+                  borderLeft: 'none',
+                  borderRight: `1px solid ${borderColor}`,
+                  borderTop: 'none',
+                  borderBottom: `2px solid ${borderColor}`,
+                  padding: '6px 7px',
+                  fontSize: `${headingSize}px`,
+                  fontFamily: fontFamily,
+                  fontWeight: 'bold',
+                  textAlign: 'center',
+                  color: textColor,
+                  width: '14%'
+                }}>Bale No.</th>
+                <th style={{
+                  borderLeft: 'none',
+                  borderRight: `1px solid ${borderColor}`,
+                  borderTop: 'none',
+                  borderBottom: `2px solid ${borderColor}`,
+                  padding: '6px 7px',
+                  fontSize: `${headingSize}px`,
+                  fontFamily: fontFamily,
+                  fontWeight: 'bold',
+                  textAlign: 'center',
+                  color: textColor,
+                  width: '15%'
+                }}>Pieces</th>
+                <th style={{
+                  borderLeft: 'none',
+                  borderRight: `1px solid ${borderColor}`,
+                  borderTop: 'none',
+                  borderBottom: `2px solid ${borderColor}`,
+                  padding: '6px 7px',
+                  fontSize: `${headingSize}px`,
+                  fontFamily: fontFamily,
+                  fontWeight: 'bold',
+                  textAlign: 'center',
+                  color: textColor,
+                  width: '14%'
+                }}>Metres</th>
+                <th style={{
+                  borderLeft: 'none',
+                  borderRight: `1px solid ${borderColor}`,
+                  borderTop: 'none',
+                  borderBottom: `2px solid ${borderColor}`,
+                  padding: '6px 7px',
+                  fontSize: `${headingSize}px`,
+                  fontFamily: fontFamily,
+                  fontWeight: 'bold',
+                  textAlign: 'center',
+                  color: textColor,
+                  width: '14%'
+                }}>Rate/Mtr</th>
+                <th style={{
+                  borderLeft: 'none',
+                  borderRight: 'none',
+                  borderTop: 'none',
+                  borderBottom: `2px solid ${borderColor}`,
+                  padding: '6px 7px',
+                  fontSize: `${headingSize}px`,
+                  fontFamily: fontFamily,
+                  fontWeight: 'bold',
+                  textAlign: 'center',
+                  color: textColor,
+                  width: '15%'
+                }}>Amount</th>
               </tr>
             </thead>
             <tbody>
-              {[
-                ...baleRows,
-                ...Array(10 - baleRows.length).fill({})
-              ].map((bale, index) => (
+              {baleRows.map((bale, index) => (
                 <tr key={index} style={{ height: "28px" }}>
-                  
                   {index === 0 ? (
-                    <td
-                      rowSpan={10}
-                      style={{
-                        border: "none",
-                        borderRight: "1px solid #666",
-                        background: "#f8f9fa",
-                        textAlign: "center",
-                        verticalAlign: "middle",
-                        fontSize: "12px",
-                        width: "120px",
-                        padding: "4px"
-                      }}
-                    >
-                      <div style={{ margin: "2px 0", fontSize: "13px", fontWeight: "bold" }}>
-                        Quality: {invoice.qualityName || "N/A"}
+                    <td rowSpan={10} style={{ 
+                      borderLeft: 'none',
+                      borderRight: `1px solid ${borderColor}`,
+                      borderTop: 'none',
+                      borderBottom: 'none',
+                      padding: '7px',
+                      fontSize: `${baseFontSize}px`,
+                      fontFamily: fontFamily,
+                      fontWeight: fontWeight,
+                      textAlign: "center", 
+                      verticalAlign: "middle", 
+                      background: lightBg,
+                      color: textColor
+                    }}>
+                      <div style={{ fontWeight: "bold", fontSize: `${baseFontSize + 2}px` }}>
+                        Quality: {invoice.qualityName}
                       </div>
-                      <div style={{ fontSize: "11px", margin: "2px 0" }}>
-                       HSN Code: <strong>{invoice.hsnCode || '5407'}</strong>
+                      <div style={{ fontSize: `${baseFontSize}px`, marginTop: '4px' }}>
+                        HSN: <strong>{invoice.hsnCode || '5407'}</strong>
                       </div>
-
                     </td>
                   ) : null}
-
-                  <td
-                    style={{
-                      border: "none",
-                      borderLeft: "1px solid #666",
-                      borderRight: "1px solid #666",
-                      padding: "4px",
-                      textAlign: "center",
-                      fontSize: "12px"
-                    }}
-                  >
-                    {bale.baleNo || ""}
-                  </td>
-
-                  <td
-                    style={{
-                      border: "none",
-                      borderRight: "1px solid #666",
-                      padding: "4px",
-                      textAlign: "center",
-                      fontSize: "12px"
-                    }}
-                  >
-                    {bale.pieces || ""}
-                  </td>
-
-                  <td
-                    style={{
-                      border: "none",
-                      borderRight: "1px solid #666",
-                      padding: "4px",
-                      textAlign: "center",
-                      fontSize: "12px"
-                    }}
-                  >
+                  <td style={{ 
+                    borderLeft: 'none',
+                    borderRight: `1px solid ${borderColor}`,
+                    borderTop: 'none',
+                    borderBottom: 'none',
+                    padding: '4px 7px',
+                    fontSize: `${baseFontSize}px`,
+                    fontFamily: fontFamily,
+                    fontWeight: fontWeight,
+                    textAlign: "center",
+                    color: textColor
+                  }}>{bale.baleNo}</td>
+                  <td style={{ 
+                    borderLeft: 'none',
+                    borderRight: `1px solid ${borderColor}`,
+                    borderTop: 'none',
+                    borderBottom: 'none',
+                    padding: '4px 7px',
+                    fontSize: `${baseFontSize}px`,
+                    fontFamily: fontFamily,
+                    fontWeight: fontWeight,
+                    textAlign: "center",
+                    color: textColor
+                  }}>{bale.pieces}</td>
+                  <td style={{ 
+                    borderLeft: 'none',
+                    borderRight: `1px solid ${borderColor}`,
+                    borderTop: 'none',
+                    borderBottom: 'none',
+                    padding: '4px 7px',
+                    fontSize: `${baseFontSize}px`,
+                    fontFamily: fontFamily,
+                    fontWeight: fontWeight,
+                    textAlign: "center",
+                    color: textColor
+                  }}>
                     {bale.metres ? Math.round(bale.metres) : ""}
                   </td>
-
-                  <td
-                    style={{
-                      border: "none",
-                      borderRight: "1px solid #666",
-                      padding: "4px"
-                    }}
-                  ></td>
-
-                  <td
-                    style={{
-                      border: "none",
-                      borderRight: "1px solid #666",
-                      padding: "4px"
-                    }}
-                  ></td>
+                  <td style={{ 
+                    borderLeft: 'none',
+                    borderRight: `1px solid ${borderColor}`,
+                    borderTop: 'none',
+                    borderBottom: 'none',
+                    padding: '4px 7px',
+                    fontSize: `${baseFontSize}px`,
+                    fontFamily: fontFamily,
+                    fontWeight: fontWeight,
+                    color: textColor
+                  }}></td>
+                  <td style={{ 
+                    borderLeft: 'none',
+                    borderRight: 'none',
+                    borderTop: 'none',
+                    borderBottom: 'none',
+                    padding: '4px 7px',
+                    fontSize: `${baseFontSize}px`,
+                    fontFamily: fontFamily,
+                    fontWeight: fontWeight,
+                    color: textColor
+                  }}></td>
                 </tr>
               ))}
-
-              {/* TOTAL ROW */}
-              <tr
-                style={{
-                  borderTop: "2px solid #333",
-                  borderBottom: "2px solid #333",
-                  background: "#e9ecef",
-                  height: "28px"
-                }}
-              >
-                <td
-                  style={{
-                    border: "none",
-                    borderRight: "1px solid #666",
-                    fontWeight: "bold",
-                    textAlign: "center",
-                    fontSize: "12px",
-                    padding: "2px"
-                  }}
-                >
-                  Total:
-                </td>
-
-                <td
-                  style={{
-                    border: "none",
-                    borderLeft: "1px solid #666",
-                    borderRight: "1px solid #666",
-                    padding: "2px"
-                  }}
-                ></td>
-
-                <td
-                  style={{
-                    border: "none",
-                    borderRight: "1px solid #666",
-                    textAlign: "center",
-                    fontWeight: "bold",
-                    fontSize: "12px",
-                    padding: "2px"
-                  }}
-                >
+              
+              {/* Total Row */}
+              <tr style={{ borderTop: `2px solid ${borderColor}`, background: tableBg, height: '30px' }}>
+                <td style={{ 
+                  borderLeft: 'none',
+                  borderRight: `1px solid ${borderColor}`,
+                  borderTop: `2px solid ${borderColor}`,
+                  borderBottom: 'none',
+                  padding: '5px 7px',
+                  fontSize: `${baseFontSize}px`,
+                  fontFamily: fontFamily,
+                  fontWeight: "bold",
+                  textAlign: "center",
+                  color: textColor
+                }}>Total:</td>
+                <td style={{ 
+                  borderLeft: 'none',
+                  borderRight: `1px solid ${borderColor}`,
+                  borderTop: `2px solid ${borderColor}`,
+                  borderBottom: 'none',
+                  padding: '5px 7px',
+                  fontSize: `${baseFontSize}px`,
+                  fontFamily: fontFamily,
+                  fontWeight: fontWeight,
+                  color: textColor
+                }}></td>
+                <td style={{ 
+                  borderLeft: 'none',
+                  borderRight: `1px solid ${borderColor}`,
+                  borderTop: `2px solid ${borderColor}`,
+                  borderBottom: 'none',
+                  padding: '5px 7px',
+                  fontSize: `${baseFontSize}px`,
+                  fontFamily: fontFamily,
+                  fontWeight: "bold",
+                  textAlign: "center",
+                  color: textColor
+                }}>
                   {totals.totalPieces}
                 </td>
-
-                <td
-                  style={{
-                    border: "none",
-                    borderRight: "1px solid #666",
-                    textAlign: "center",
-                    fontWeight: "bold",
-                    fontSize: "12px",
-                    padding: "2px"
-                  }}
-                >
+                <td style={{ 
+                  borderLeft: 'none',
+                  borderRight: `1px solid ${borderColor}`,
+                  borderTop: `2px solid ${borderColor}`,
+                  borderBottom: 'none',
+                  padding: '5px 7px',
+                  fontSize: `${baseFontSize}px`,
+                  fontFamily: fontFamily,
+                  fontWeight: "bold",
+                  textAlign: "center",
+                  color: textColor
+                }}>
                   {Math.round(totals.totalMetres)}
                 </td>
-
-                <td
-                  style={{
-                    border: "none",
-                    borderRight: "1px solid #666",
-                    textAlign: "center",
-                    fontWeight: "bold",
-                    fontSize: "11px",
-                    padding: "2px"
-                  }}
-                >
-                  {totals.ratePerMeter}
+                <td style={{ 
+                  borderLeft: 'none',
+                  borderRight: `1px solid ${borderColor}`,
+                  borderTop: `2px solid ${borderColor}`,
+                  borderBottom: 'none',
+                  padding: '5px 7px',
+                  fontSize: `${baseFontSize}px`,
+                  fontFamily: fontFamily,
+                  fontWeight: "bold",
+                  textAlign: "center",
+                  color: textColor
+                }}>
+                  {totals.ratePerMeter.toFixed(2)}
                 </td>
-
-                <td
-                  style={{
-                    border: "none",
-                    borderRight: "1px solid #666",
-                    textAlign: "right",
-                    fontWeight: "bold",
-                    fontSize: "12px",
-                    padding: "2px"
-                  }}
-                >
+                <td style={{ 
+                  borderLeft: 'none',
+                  borderRight: 'none',
+                  borderTop: `2px solid ${borderColor}`,
+                  borderBottom: 'none',
+                  padding: '5px 7px',
+                  fontSize: `${baseFontSize}px`,
+                  fontFamily: fontFamily,
+                  fontWeight: "bold",
+                  textAlign: "right",
+                  color: textColor
+                }}>
                   {totals.amount.toFixed(2)}
                 </td>
               </tr>
             </tbody>
           </table>
 
-          {/* BANK DETAILS & TAX */}
-          <table style={{ width: '100%', borderCollapse: 'collapse', borderBottom: '1px double #333' }}>
+          {/* Bank & Tax Section */}
+          <table style={{ width: '100%', borderCollapse: 'collapse', borderBottom: `1px double ${borderColor}` }}>
             <tbody>
               <tr>
-                <td colSpan="2" style={{...cellStyle, fontWeight: 'bold', textAlign: 'center', borderRight: '2px solid #333', fontSize: '11px', background: '#e9ecef', color: '#2c3e50', padding: '6px'}}>
+                <td colSpan="2" style={{
+                  ...cellStyle, 
+                  fontWeight: 'bold',
+                  fontSize: `${headingSize}px`, 
+                  textAlign: 'center', 
+                  borderRight: `2px solid ${borderColor}`, 
+                  background: tableBg, 
+                  padding: '6px'
+                }}>
                   Bank Details
                 </td>
-                <td style={{...cellStyle, textAlign: 'right', fontWeight: 'bold', fontSize: '11px'}}>
-                  {parseFloat(invoice.cgst) > 0 ? 'Add CGST @ 2.5%' : 'Add IGST @ 5%'}
+                <td style={{...cellStyle, textAlign: 'right', fontWeight: 'bold', width: '25%'}}>
+                  {parseFloat(invoice.cgst) > 0 ? 'CGST @ 2.5%' : 'IGST @ 5%'}
                 </td>
-                <td style={{...cellStyle, width: '18%', textAlign: 'right', fontWeight: 'bold', fontSize: '11px'}}>
+                <td style={{...cellStyle, textAlign: 'right', fontWeight: 'bold', width: '15%'}}>
                   {parseFloat(invoice.cgst) > 0 ? totals.cgst.toFixed(2) : totals.igst.toFixed(2)}
                 </td>
               </tr>
+              
               <tr>
-                <td style={{...cellStyle, width: '15%', fontWeight: 'bold', background: '#f8f9fa'}}>Bank Name:</td>
-                <td style={{...cellStyle, width: '35%', borderRight: '2px solid #333', fontSize: '10px'}}>{companySettings?.bankName || ''}</td>
-                <td style={{...cellStyle, textAlign: 'right', fontWeight: 'bold', fontSize: '11px'}}>
-                  {parseFloat(invoice.cgst) > 0 ? 'Add SGST @ 2.5%' : ''}
+                <td style={{...cellStyle, fontWeight: 'bold', background: lightBg, width: '15%'}}>
+                  {showBankDetails ? 'Bank:' : ''}
                 </td>
-                <td style={{...cellStyle, textAlign: 'right', fontWeight: 'bold', fontSize: '11px'}}>
-                  {parseFloat(invoice.cgst) > 0 ? totals.sgst.toFixed(2) : ''}
+                <td style={{...cellStyle, borderRight: `2px solid ${borderColor}`, width: '45%'}}>
+                  {showBankDetails ? companySettings?.bankName : ''}
                 </td>
+                {parseFloat(invoice.cgst) > 0 ? (
+                  <>
+                    <td style={{...cellStyle, textAlign: 'right', fontWeight: 'bold'}}>SGST @ 2.5%</td>
+                    <td style={{...cellStyle, textAlign: 'right', fontWeight: 'bold'}}>
+                      {totals.sgst.toFixed(2)}
+                    </td>
+                  </>
+                ) : (
+                  <>
+                    <td style={{...cellStyle}}></td>
+                    <td style={{...cellStyle}}></td>
+                  </>
+                )}
               </tr>
+              
               <tr>
-                <td style={{...cellStyle, fontWeight: 'bold', background: '#f8f9fa'}}>Account No.:</td>
-                <td style={{...cellStyle, borderRight: '2px solid #333', fontSize: '10px'}}>{companySettings?.accountNumber || ''}</td>
-                <td style={{...cellStyle, textAlign: 'right', fontWeight: 'bold', fontSize: '11px'}}>Round Off:</td>
-                <td style={{...cellStyle, textAlign: 'right', fontWeight: 'bold', fontSize: '11px'}}>
+                <td style={{...cellStyle, fontWeight: 'bold', background: lightBg}}>
+                  {showBankDetails ? 'Account:' : ''}
+                </td>
+                <td style={{...cellStyle, borderRight: `2px solid ${borderColor}`}}>
+                  {showBankDetails ? companySettings?.accountNumber : ''}
+                </td>
+                <td style={{...cellStyle, textAlign: 'right', fontWeight: 'bold'}}>Round Off:</td>
+                <td style={{...cellStyle, textAlign: 'right', fontWeight: 'bold'}}>
                   {totals.roundOff >= 0 ? '+' : ''}{totals.roundOff.toFixed(2)}
                 </td>
               </tr>
+              
               <tr>
-                <td style={{...cellStyle, fontWeight: 'bold', background: '#f8f9fa'}}>IFSC Code:</td>
-                <td style={{...cellStyle, borderRight: '2px solid #333', fontSize: '10px'}}>{companySettings?.ifscCode || ''}</td>
-                 <td style={{...cellStyle, textAlign: 'right', fontWeight: 'bold', fontSize: '11px'}}></td>
-                 <td style={{...cellStyle, textAlign: 'right', fontWeight: 'bold', fontSize: '11px'}}></td>
+                <td style={{...cellStyle, fontWeight: 'bold', background: lightBg}}>
+                  {showBankDetails ? 'IFSC:' : ''}
+                </td>
+                <td style={{...cellStyle, borderRight: `2px solid ${borderColor}`}}>
+                  {showBankDetails ? companySettings?.ifscCode : ''}
+                </td>
+                <td style={{...cellStyle}}></td>
+                <td style={{...cellStyle}}></td>
               </tr>
+              
               <tr>
-                <td style={{...cellStyle, fontWeight: 'bold', background: '#f8f9fa'}}>PAN No:</td>
-                <td style={{...cellStyle, borderRight: '2px solid #333', fontSize: '10px'}}>{companySettings?.panNumber || ''}</td>
-                <td style={{...cellStyle, textAlign: 'right', fontWeight: 'bold', background: '#e9ecef', fontSize: '11px'}}>Total Amount:</td>
-                <td style={{...cellStyle, textAlign: 'right', fontWeight: 'bold', fontSize: '13px', background: '#e9ecef'}}>₹{totals.totalAmount}</td>
+                <td style={{...cellStyle, fontWeight: 'bold', background: lightBg}}>
+                  {showBankDetails ? 'PAN:' : ''}
+                </td>
+                <td style={{...cellStyle, borderRight: `2px solid ${borderColor}`}}>
+                  {showBankDetails ? companySettings?.panNumber : ''}
+                </td>
+                <td style={{...cellStyle, textAlign: 'right', fontWeight: 'bold', background: tableBg}}>
+                  Total:
+                </td>
+                <td style={{
+                  ...cellStyle, 
+                  textAlign: 'right', 
+                  fontWeight: 'bold', 
+                  fontSize: `${baseFontSize + 2}px`, 
+                  background: tableBg
+                }}>
+                  ₹{totals.totalAmount}
+                </td>
               </tr>
             </tbody>
           </table>
 
-          {/* AMOUNT IN WORDS */}
-          <div
-            style={{
-              borderBottom: '2px solid #333',
-              padding: '10px',
-              fontSize: '11px',
-              background: '#e9ecef',
-              textAlign: 'center'
-            }}
-          >
-            <span style={{ fontWeight: 'normal', color: '#000000ff' }}>
-              Amount in Words:
-            </span>
-            <span style={{ fontWeight: 'bold', marginLeft: '8px', color: '#495057' }}>
+          {/* Amount in Words */}
+          <div style={{ 
+            borderBottom: `2px solid ${borderColor}`, 
+            padding: '10px', 
+            fontSize: `${baseFontSize}px`, 
+            background: tableBg, 
+            textAlign: 'center',
+            fontFamily: fontFamily,
+            color: textColor
+          }}>
+            <span style={{ fontWeight: 'normal' }}>Amount in Words:</span>
+            <span style={{ fontWeight: 'bold', marginLeft: '8px' }}>
               {numberToWords(totals.totalAmount)}
             </span>
           </div>
 
-          {/* TERMS & SIGNATURE */}
+          {/* Terms & Signature */}
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <tbody>
               <tr>
-                <td style={{...cellStyle, width: '60%', verticalAlign: 'center', borderRight: '2px solid #333', borderBottom: 'none', background: '#f8f9fa', padding: '14px'}}>
-                  <div style={{ fontWeight: 'bold', marginBottom: '10px', fontSize: '12px', color: '#2c3e50' }}>Terms & Conditions</div>
-                  {companySettings?.termsLine1 && (
-                    <div style={{ marginBottom: '6px', lineHeight: '1.6', fontSize: '10px', color: '#495057' }}>1) {companySettings.termsLine1}</div>
-                  )}
-                  {companySettings?.termsLine2 && (
-                    <div style={{ marginBottom: '6px', lineHeight: '1.6', fontSize: '10px', color: '#495057' }}>2) {companySettings.termsLine2}</div>
-                  )}
-                  {companySettings?.termsLine3 && (
-                    <div style={{ marginBottom: '6px', lineHeight: '1.6', fontSize: '10px', color: '#495057' }}>3) {companySettings.termsLine3}</div>
-                  )}
-                  {companySettings?.termsLine4 && (
-                    <div style={{ marginBottom: '6px', lineHeight: '1.6', fontSize: '10px', color: '#495057' }}>4) {companySettings.termsLine4}</div>
+                <td style={{
+                  ...cellStyle, 
+                  width: '60%', 
+                  verticalAlign: 'top', 
+                  borderRight: `2px solid ${borderColor}`, 
+                  borderBottom: 'none', 
+                  background: lightBg, 
+                  padding: '14px',
+                  minHeight: '120px'
+                }}>
+                  <div style={{ fontWeight: 'bold', marginBottom: '10px', fontSize: `${headingSize}px` }}>
+                    Terms & Conditions
+                  </div>
+                  
+                  {showTerms && (
+                    <>
+                      {companySettings?.terms?.invoice?.line1 && (
+                        <div style={{ marginBottom: '6px', fontSize: `${baseFontSize}px` }}>
+                          1) {companySettings.terms.invoice.line1}
+                        </div>
+                      )}
+                      {companySettings?.terms?.invoice?.line2 && (
+                        <div style={{ marginBottom: '6px', fontSize: `${baseFontSize}px` }}>
+                          2) {companySettings.terms.invoice.line2}
+                        </div>
+                      )}
+                      {companySettings?.terms?.invoice?.line3 && (
+                        <div style={{ marginBottom: '6px', fontSize: `${baseFontSize}px` }}>
+                          3) {companySettings.terms.invoice.line3}
+                        </div>
+                      )}
+                      {companySettings?.terms?.invoice?.line4 && (
+                        <div style={{ marginBottom: '6px', fontSize: `${baseFontSize}px` }}>
+                          4) {companySettings.terms.invoice.line4}
+                        </div>
+                      )}
+                    </>
                   )}
                 </td>
                 <td style={{...cellStyle, width: '40%', verticalAlign: 'top', borderBottom: 'none', padding: '14px'}}>
-                  <div style={{ fontSize: '12px', fontWeight: 'bold', textAlign: 'right', marginBottom: '100px', color: '#2c3e50' }}>
+                  <div style={{ 
+                    fontSize: `${baseFontSize + 1}px`, 
+                    fontWeight: 'bold', 
+                    textAlign: 'right', 
+                    marginBottom: '80px' 
+                  }}>
                     For <b>{companySettings?.companyName}</b>
                   </div>
-                  <div style={{ textAlign: 'right', marginTop: '40px' }}>
+                  {companySettings?.signatureImage && (
+                    <div style={{ textAlign: 'right', marginBottom: '10px' }}>
+                      <img 
+                        src={companySettings.signatureImage} 
+                        alt="Signature" 
+                        style={{ 
+                          maxWidth: '150px', 
+                          maxHeight: '60px',
+                          filter: isBlackWhite ? 'grayscale(100%)' : 'none'
+                        }}
+                      />
+                    </div>
+                  )}
+                  <div style={{ textAlign: 'right' }}>
                     <div style={{ 
-                      borderTop: '1px solid #666', 
+                      borderTop: `1px solid ${borderColor}`, 
                       display: 'inline-block', 
                       minWidth: '200px', 
                       paddingTop: '8px', 
-                      fontSize: '11px',
-                      textAlign: 'center',
-                      color: '#6c757d'
+                      fontSize: `${baseFontSize}px`, 
+                      textAlign: 'center' 
                     }}>
-                      Proprietor / Authorized Signatory
+                      {companySettings?.signatureText || 'Authorized Signatory'}
                     </div>
                   </div>
                 </td>
@@ -709,25 +914,7 @@ function ViewInvoices() {
       </div>
 
       <div style={{ display: 'none' }}>
-        <div ref={printRef} className="invoice-print-container">
-          <style>{`
-            @media print {
-              @page {
-                size: A4 portrait !important;
-                margin: 8mm !important;
-              }
-              .invoice-print-container {
-                width: 210mm !important;
-                height: 297mm !important;
-              }
-              body {
-                width: 210mm !important;
-                height: 297mm !important;
-                -webkit-print-color-adjust: exact;
-                print-color-adjust: exact;
-              }
-            }
-          `}</style>
+        <div ref={printRef}>
           <PrintableInvoice />
         </div>
       </div>
