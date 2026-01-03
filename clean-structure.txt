@@ -1,5 +1,9 @@
+├── .gitignore
 ├── backend
   ├── gstScraper.js
+  ├── middleware
+    ├── auth.js
+    ├── dataAccess.js
   ├── models
     ├── CompanySettings.js
     ├── Deal.js
@@ -9,8 +13,10 @@
     ├── PurchaseDelivery.js
     ├── Quality.js
     ├── TaxInvoice.js
+    ├── User.js
   ├── package.json
   ├── routes
+    ├── auth.js
     ├── companySettings.js
     ├── deal.js
     ├── deliveryChallan.js
@@ -22,7 +28,6 @@
     ├── taxInvoice.js
   ├── server.js
 ├── clean-structure.txt
-├── companysetting.js
 ├── frontend
   ├── .env.development
   ├── .env.local
@@ -37,6 +42,10 @@
     ├── components
       ├── AppUI.css
       ├── AppUI.js
+      ├── ProtectedRoute.js
+    ├── context
+      ├── AuthContext.js
+      ├── ThemeContext.js
     ├── index.css
     ├── index.js
     ├── logo.svg
@@ -48,10 +57,13 @@
       ├── DealManagement.js
       ├── DeliveryChallan.js
       ├── InvoiceDetail.js
+      ├── Login.js
+      ├── modules
       ├── PartyManagement.js
       ├── PurchaseDeliveries.js
       ├── PurchaseManagement.js
       ├── QualityManagement.js
+      ├── Register.js
       ├── TaxInvoice.js
       ├── ViewChallans.js
       ├── ViewInvoices.js
@@ -62,6 +74,4 @@
     ├── utils
       ├── formatters.js
 ├── generateTree.js
-├── src
-  ├── context
-    ├── ThemeContext.js
+├── prompt

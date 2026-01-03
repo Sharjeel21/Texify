@@ -1,3 +1,4 @@
+//fronend/screen/pages/AddBales.js
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { deliveryChallanAPI } from '../services/api';

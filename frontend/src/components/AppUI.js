@@ -1,36 +1,142 @@
 // ==========================================
-// AppUI.js - Refactored with better organization
+// AppUI.js - Enterprise-Level Navigation
 // ==========================================
 
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import './AppUI.css';
 
-// Navigation Configuration - Single source of truth
-const NAVIGATION_ITEMS = [
-  { path: '/', label: 'Dashboard', icon: '📊', shortLabel: 'Dashboard' },
-  { path: '/qualities', label: 'Qualities', icon: '⭐', shortLabel: 'Qualities' },
-  { path: '/parties', label: 'Parties', icon: '🤝', shortLabel: 'Parties' },
-  { path: '/deals', label: 'Deals', icon: '💼', shortLabel: 'Deals' },
-  { path: '/delivery-challan', label: 'Delivery Challan', icon: '📄', shortLabel: 'Challan' },
-  { path: '/tax-invoice', label: 'Tax Invoice', icon: '🧾', shortLabel: 'Invoice' },
-  { path: '/purchases', label: 'Purchases', icon: '🛒', shortLabel: 'Purchases' },
-  { path: '/purchase-deliveries', label: 'Deliveries & Payments', icon: '📦', shortLabel: 'Deliveries' },
-  { path: '/view-challans', label: 'View Challans', icon: '📑', shortLabel: 'View Challans' },
-  { path: '/view-invoices', label: 'View Invoices', icon: '📘', shortLabel: 'View Invoices' },
-  { path: '/company-settings', label: 'Company Settings', icon: '⚙️', shortLabel: 'Settings' }
+// ==========================================
+// NAVIGATION CONFIGURATION WITH GROUPING
+// ==========================================
+const NAVIGATION_GROUPS = [
+  {
+    title: 'Overview',
+    items: [
+      { 
+        path: '/dashboard', 
+        label: 'Dashboard', 
+        icon: '📊', 
+        description: 'Main overview'
+      }
+    ]
+  },
+  {
+    title: 'Master Data',
+    items: [
+      { 
+        path: '/qualities', 
+        label: 'Quality Management', 
+        icon: '⭐', 
+        description: 'Manage yarn qualities'
+      },
+      { 
+        path: '/parties', 
+        label: 'Party Management', 
+        icon: '🤝', 
+        description: 'Manage customers & suppliers'
+      },
+      { 
+        path: '/company-settings', 
+        label: 'Company Settings', 
+        icon: '⚙️', 
+        description: 'Configure company details'
+      }
+    ]
+  },
+  {
+    title: 'Sales Operations',
+    items: [
+      { 
+        path: '/deals', 
+        label: 'Deal Management', 
+        icon: '💼', 
+        description: 'Manage sales deals'
+      },
+      { 
+        path: '/delivery-challan', 
+        label: 'Delivery Challan', 
+        icon: '📄', 
+        description: 'Create delivery challans'
+      },
+      { 
+        path: '/tax-invoice', 
+        label: 'Tax Invoice', 
+        icon: '🧾', 
+        description: 'Generate tax invoices'
+      }
+    ]
+  },
+  {
+    title: 'Purchase Operations',
+    items: [
+      { 
+        path: '/purchases', 
+        label: 'Purchase Management', 
+        icon: '🛒', 
+        description: 'Manage yarn purchases'
+      },
+      { 
+        path: '/purchase-deliveries', 
+        label: 'Deliveries & Payments', 
+        icon: '📦', 
+        description: 'Track deliveries & payments'
+      }
+    ]
+  },
+  {
+    title: 'Reports',
+    items: [
+      { 
+        path: '/view-challans', 
+        label: 'View Challans', 
+        icon: '📑', 
+        description: 'Browse all challans'
+      },
+      { 
+        path: '/view-invoices', 
+        label: 'View Invoices', 
+        icon: '📘', 
+        description: 'Browse all invoices'
+      }
+    ]
+  }
 ];
 
+// Quick access items for header (most used features)
+const QUICK_ACCESS_ITEMS = [
+  { path: '/dashboard', label: 'Dashboard' },
+  { path: '/deals', label: 'Deals' },
+  { path: '/delivery-challan', label: 'Challan' },
+  { path: '/purchases', label: 'Purchases' }
+];
+
+// ==========================================
+// MAIN APP UI COMPONENT
+// ==========================================
 function AppUI({ children }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
 
-  // Event Handlers
   const handleToggleSidebar = () => setSidebarOpen(prev => !prev);
   const handleCloseSidebar = () => setSidebarOpen(false);
 
+  const handleLogout = () => {
+    if (window.confirm('Are you sure you want to logout?')) {
+      logout();
+      navigate('/login');
+    }
+  };
+
   return (
     <div className="appUI">
-      <Header onToggleSidebar={handleToggleSidebar} />
+      <Header 
+        onToggleSidebar={handleToggleSidebar} 
+        user={user} 
+        onLogout={handleLogout} 
+      />
       
       <div className="appUI__layout">
         <Sidebar isOpen={sidebarOpen} onClose={handleCloseSidebar} />
@@ -43,27 +149,31 @@ function AppUI({ children }) {
 }
 
 // ==========================================
-// Header Component
+// HEADER COMPONENT
 // ==========================================
-function Header({ onToggleSidebar }) {
+function Header({ onToggleSidebar, user, onLogout }) {
   return (
     <header className="appUI__header">
       <div className="appUI__header-container">
         <MenuToggleButton onClick={onToggleSidebar} />
         <Logo />
-        <DesktopNavigation />
-        <UserProfile />
+        <QuickAccessNavigation />
+        <UserProfile user={user} onLogout={onLogout} />
       </div>
     </header>
   );
 }
 
 // ==========================================
-// Header Sub-components
+// HEADER SUB-COMPONENTS
 // ==========================================
 function MenuToggleButton({ onClick }) {
   return (
-    <button className="appUI__menu-toggle" onClick={onClick} aria-label="Toggle menu">
+    <button 
+      className="appUI__menu-toggle" 
+      onClick={onClick} 
+      aria-label="Toggle navigation menu"
+    >
       <span></span>
       <span></span>
       <span></span>
@@ -73,38 +183,119 @@ function MenuToggleButton({ onClick }) {
 
 function Logo() {
   return (
-    <div className="appUI__logo">
+    <Link to="/dashboard" className="appUI__logo">
       <h1>Texify</h1>
-    </div>
+    </Link>
   );
 }
 
-function DesktopNavigation() {
+function QuickAccessNavigation() {
+  const location = useLocation();
+
   return (
     <nav className="appUI__nav">
-      {NAVIGATION_ITEMS.map(item => (
+      {QUICK_ACCESS_ITEMS.map(item => (
         <Link 
           key={item.path} 
           to={item.path} 
-          className="appUI__nav-link"
+          className={`appUI__nav-link ${location.pathname === item.path ? 'active' : ''}`}
         >
-          {item.shortLabel}
+          {item.label}
         </Link>
       ))}
     </nav>
   );
 }
 
-function UserProfile() {
+function UserProfile({ user, onLogout }) {
+  const [showMenu, setShowMenu] = useState(false);
+  const navigate = useNavigate();
+
+  const handleNavigateSettings = () => {
+    setShowMenu(false);
+    navigate('/company-settings');
+  };
+
   return (
-    <div className="appUI__user">
-      <span className="appUI__user-icon">👤</span>
+    <div className="dropdown">
+      <div 
+        className="appUI__user" 
+        onClick={() => setShowMenu(!showMenu)}
+      >
+        <span className="appUI__user-icon">
+          {user?.name ? user.name.charAt(0).toUpperCase() : '👤'}
+        </span>
+        <span className="appUI__user-name">
+          {user?.name?.split(' ')[0]}
+        </span>
+        <span className="appUI__user-dropdown">▼</span>
+      </div>
+
+      {showMenu && (
+        <>
+          <div className="dropdown-menu" style={{ display: 'block' }}>
+            <div style={{ 
+              padding: '1rem', 
+              borderBottom: '1px solid var(--border-color)' 
+            }}>
+              <div style={{ 
+                fontWeight: 'bold', 
+                color: 'var(--text-primary)',
+                marginBottom: '0.25rem'
+              }}>
+                {user?.name}
+              </div>
+              <div style={{ 
+                fontSize: '0.85rem', 
+                color: 'var(--text-secondary)',
+                marginBottom: '0.5rem'
+              }}>
+                {user?.email}
+              </div>
+              {user?.role && (
+                <span className="badge badge-primary">
+                  {user.role.toUpperCase()}
+                </span>
+              )}
+            </div>
+            
+            <button 
+              className="dropdown-item" 
+              onClick={handleNavigateSettings}
+            >
+              ⚙️ Company Settings
+            </button>
+            
+            <div className="dropdown-divider"></div>
+            
+            <button 
+              className="dropdown-item" 
+              onClick={onLogout}
+              style={{ color: '#dc2626' }}
+            >
+              🚪 Logout
+            </button>
+          </div>
+          
+          <div 
+            style={{ 
+              position: 'fixed', 
+              top: 0, 
+              left: 0, 
+              right: 0, 
+              bottom: 0, 
+              zIndex: 998 
+            }} 
+            onClick={() => setShowMenu(false)}
+          />
+        </>
+      )}
     </div>
   );
 }
 
 // ==========================================
-// Sidebar Component
+// SIDEBAR COMPONENT
 // ==========================================
 function Sidebar({ isOpen, onClose }) {
   return (
@@ -118,25 +309,35 @@ function Sidebar({ isOpen, onClose }) {
 }
 
 function SidebarNavigation({ onLinkClick }) {
+  const location = useLocation();
+
   return (
-    <nav className="appUI__sidebar-nav">
-      {NAVIGATION_ITEMS.map(item => (
-        <Link
-          key={item.path}
-          to={item.path}
-          className="appUI__sidebar-link"
-          onClick={onLinkClick}
-        >
-          <span className="appUI__sidebar-icon">{item.icon}</span>
-          {item.label}
-        </Link>
+    <div>
+      {NAVIGATION_GROUPS.map((group, index) => (
+        <div key={index} className="appUI__nav-group">
+          <h4 className="appUI__nav-group-title">{group.title}</h4>
+          <nav className="appUI__sidebar-nav">
+            {group.items.map(item => (
+              <Link
+                key={item.path}
+                to={item.path}
+                className={`appUI__sidebar-link ${location.pathname === item.path ? 'active' : ''}`}
+                onClick={onLinkClick}
+                title={item.description}
+              >
+                <span className="appUI__sidebar-icon">{item.icon}</span>
+                {item.label}
+              </Link>
+            ))}
+          </nav>
+        </div>
       ))}
-    </nav>
+    </div>
   );
 }
 
 // ==========================================
-// Main Content Component
+// MAIN CONTENT COMPONENT
 // ==========================================
 function MainContent({ children }) {
   return (
@@ -147,7 +348,7 @@ function MainContent({ children }) {
 }
 
 // ==========================================
-// Sidebar Overlay Component
+// SIDEBAR OVERLAY COMPONENT
 // ==========================================
 function SidebarOverlay({ onClick }) {
   return (
