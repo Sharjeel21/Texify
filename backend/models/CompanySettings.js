@@ -3,6 +3,16 @@ const mongoose = require('mongoose');
 
 const companySettingsSchema = new mongoose.Schema({
   // ============================================
+  // USER REFERENCE (Multi-Tenancy)
+  // ============================================
+  user: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true,
+    index: true
+  },
+
+  // ============================================
   // COMPANY DETAILS
   // ============================================
   companyName: {
@@ -39,9 +49,9 @@ const companySettingsSchema = new mongoose.Schema({
   gstNumber: {
     type: String,
     required: true,
-    unique: true,
     uppercase: true,
     trim: true
+    // unique: true removed here, handled by compound index below
   },
   logo: {
     type: String
@@ -397,6 +407,9 @@ const companySettingsSchema = new mongoose.Schema({
 }, {
   timestamps: true
 });
+
+// COMPOUND INDEX: GST Number is unique per User
+companySettingsSchema.index({ user: 1, gstNumber: 1 }, { unique: true });
 
 // ============================================
 // HELPER METHODS

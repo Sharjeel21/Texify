@@ -1,10 +1,18 @@
+// backend/models/Deals.js
 const mongoose = require('mongoose');
 
 const dealSchema = new mongoose.Schema({
+  user: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true,
+    index: true
+  },
+
   dealNumber: {
     type: Number,
-    required: true,
-    unique: true
+    required: true
+    // unique: true removed here
   },
   party: {
     type: mongoose.Schema.Types.ObjectId,
@@ -111,9 +119,9 @@ dealSchema.virtual('remainingBilties').get(function() {
 dealSchema.set('toJSON', { virtuals: true });
 dealSchema.set('toObject', { virtuals: true });
 
-// Index for faster queries
-dealSchema.index({ party: 1, status: 1 });
-dealSchema.index({ quality: 1, status: 1 });
-dealSchema.index({ dealNumber: 1 });
+// COMPOUND INDICES
+dealSchema.index({ user: 1, dealNumber: 1 }, { unique: true });
+dealSchema.index({ user: 1, party: 1, status: 1 });
+dealSchema.index({ user: 1, quality: 1, status: 1 });
 
 module.exports = mongoose.model('Deal', dealSchema);

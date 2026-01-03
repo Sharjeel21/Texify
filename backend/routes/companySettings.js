@@ -1,13 +1,18 @@
-// backend/routes/companySettings.js
+// backend/routes/companySettings.js - UPDATED WITH SECURITY
 const express = require('express');
 const router = express.Router();
 const CompanySettings = require('../models/CompanySettings');
 const { initCaptcha, searchGST } = require('../gstScraper');
+const { authenticate } = require('../middleware/auth');
+const { 
+  secureCreate, 
+  secureUpdate, 
+  handleCompanySettings 
+} = require('../middleware/dataAccess');
 
 // ============================================
-// GST Verification Routes
+// GST Verification Routes (No auth needed)
 // ============================================
-
 router.get('/gst/init-captcha', async (req, res) => {
   try {
     const result = await initCaptcha();
@@ -44,13 +49,13 @@ router.post('/gst/verify', async (req, res) => {
 });
 
 // ============================================
-// Company Settings Routes
+// PROTECTED ROUTES - Require Authentication
 // ============================================
 
-// Get company settings with auto-reset check
-router.get('/', async (req, res) => {
+// Get company settings for current user
+router.get('/', authenticate, handleCompanySettings, async (req, res) => {
   try {
-    let settings = await CompanySettings.findOne();
+    let settings = await CompanySettings.findOne({ user: req.userId });
     
     if (!settings) {
       return res.json({
@@ -77,20 +82,22 @@ router.get('/', async (req, res) => {
 });
 
 // Create or update company settings
-router.post('/', async (req, res) => {
+router.post('/', authenticate, secureCreate, async (req, res) => {
   try {
-    let settings = await CompanySettings.findOne();
+    let settings = await CompanySettings.findOne({ user: req.userId });
     
     if (settings) {
       // Update existing settings
       Object.assign(settings, req.body);
+      settings.user = req.userId; // Ensure user doesn't change
       settings.updatedAt = new Date();
       await settings.save();
-      console.log('✅ Company settings updated successfully');
+      console.log('✅ Company settings updated for user:', req.userId);
     } else {
-      // Create new settings with defaults
+      // Create new settings
       const defaultSettings = {
         ...req.body,
+        user: req.userId, // Always set to current user
         numberSeries: req.body.numberSeries || {},
         invoiceFormat: req.body.invoiceFormat || {},
         challanFormat: req.body.challanFormat || {},
@@ -101,7 +108,7 @@ router.post('/', async (req, res) => {
       
       settings = new CompanySettings(defaultSettings);
       await settings.save();
-      console.log('✅ Company settings created successfully');
+      console.log('✅ Company settings created for user:', req.userId);
     }
     
     res.json({
@@ -121,9 +128,9 @@ router.post('/', async (req, res) => {
 });
 
 // Update specific fields (PATCH)
-router.patch('/', async (req, res) => {
+router.patch('/', authenticate, secureUpdate, async (req, res) => {
   try {
-    let settings = await CompanySettings.findOne();
+    let settings = await CompanySettings.findOne({ user: req.userId });
     
     if (!settings) {
       return res.status(404).json({ 
@@ -154,7 +161,7 @@ router.patch('/', async (req, res) => {
     
     // Update other fields
     Object.keys(req.body).forEach(key => {
-      if (!['numberSeries', 'invoiceFormat', 'challanFormat', 'terms', 'preferences', 'financialYear'].includes(key)) {
+      if (!['numberSeries', 'invoiceFormat', 'challanFormat', 'terms', 'preferences', 'financialYear', 'user'].includes(key)) {
         settings[key] = req.body[key];
       }
     });
@@ -179,13 +186,12 @@ router.patch('/', async (req, res) => {
 });
 
 // ============================================
-// Number Series Management
+// Number Series Management (All Protected)
 // ============================================
 
-// Get next document numbers (preview without incrementing)
-router.get('/next-numbers', async (req, res) => {
+router.get('/next-numbers', authenticate, async (req, res) => {
   try {
-    const settings = await CompanySettings.findOne();
+    const settings = await CompanySettings.findOne({ user: req.userId });
     
     if (!settings) {
       return res.status(404).json({
@@ -194,15 +200,12 @@ router.get('/next-numbers', async (req, res) => {
       });
     }
     
-    // Check if auto-reset needed
     await settings.autoResetIfNeeded();
     
-    // Generate preview numbers (without saving)
     const previewInvoice = settings.getNextInvoiceNumber();
     const previewChallan = settings.getNextChallanNumber();
     const previewPurchase = settings.getNextPurchaseNumber();
     
-    // Decrement back to get current state
     settings.numberSeries.invoiceCurrentNumber -= 1;
     settings.numberSeries.challanCurrentNumber -= 1;
     settings.numberSeries.purchaseCurrentNumber -= 1;
@@ -247,10 +250,9 @@ router.get('/next-numbers', async (req, res) => {
   }
 });
 
-// Generate and increment invoice number
-router.post('/generate-invoice-number', async (req, res) => {
+router.post('/generate-invoice-number', authenticate, async (req, res) => {
   try {
-    const settings = await CompanySettings.findOne();
+    const settings = await CompanySettings.findOne({ user: req.userId });
     
     if (!settings) {
       return res.status(404).json({
@@ -277,10 +279,9 @@ router.post('/generate-invoice-number', async (req, res) => {
   }
 });
 
-// Generate and increment challan number
-router.post('/generate-challan-number', async (req, res) => {
+router.post('/generate-challan-number', authenticate, async (req, res) => {
   try {
-    const settings = await CompanySettings.findOne();
+    const settings = await CompanySettings.findOne({ user: req.userId });
     
     if (!settings) {
       return res.status(404).json({
@@ -307,10 +308,9 @@ router.post('/generate-challan-number', async (req, res) => {
   }
 });
 
-// Generate and increment purchase number
-router.post('/generate-purchase-number', async (req, res) => {
+router.post('/generate-purchase-number', authenticate, async (req, res) => {
   try {
-    const settings = await CompanySettings.findOne();
+    const settings = await CompanySettings.findOne({ user: req.userId });
     
     if (!settings) {
       return res.status(404).json({
@@ -337,10 +337,9 @@ router.post('/generate-purchase-number', async (req, res) => {
   }
 });
 
-// Manual reset number series
-router.post('/reset-number-series', async (req, res) => {
+router.post('/reset-number-series', authenticate, async (req, res) => {
   try {
-    const { type } = req.body; // 'invoice', 'challan', 'purchase', or 'all'
+    const { type } = req.body;
     
     if (!type || !['invoice', 'challan', 'purchase', 'all'].includes(type)) {
       return res.status(400).json({
@@ -349,7 +348,7 @@ router.post('/reset-number-series', async (req, res) => {
       });
     }
     
-    const settings = await CompanySettings.findOne();
+    const settings = await CompanySettings.findOne({ user: req.userId });
     
     if (!settings) {
       return res.status(404).json({
@@ -358,7 +357,6 @@ router.post('/reset-number-series', async (req, res) => {
       });
     }
     
-    // Store backup info before reset
     const backup = {
       invoice: settings.numberSeries.invoiceCurrentNumber,
       challan: settings.numberSeries.challanCurrentNumber,
@@ -395,10 +393,9 @@ router.post('/reset-number-series', async (req, res) => {
   }
 });
 
-// Get financial year info
-router.get('/financial-year', async (req, res) => {
+router.get('/financial-year', authenticate, async (req, res) => {
   try {
-    const settings = await CompanySettings.findOne();
+    const settings = await CompanySettings.findOne({ user: req.userId });
     
     if (!settings) {
       return res.status(404).json({
@@ -422,10 +419,10 @@ router.get('/financial-year', async (req, res) => {
   }
 });
 
-// Delete company settings (for testing)
-router.delete('/', async (req, res) => {
+// Delete company settings (for current user only)
+router.delete('/', authenticate, async (req, res) => {
   try {
-    await CompanySettings.deleteOne({});
+    await CompanySettings.deleteOne({ user: req.userId });
     res.json({ 
       success: true,
       message: 'Company settings deleted successfully' 

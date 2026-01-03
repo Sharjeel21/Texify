@@ -2,6 +2,13 @@
 const mongoose = require('mongoose');
 
 const purchaseDeliverySchema = new mongoose.Schema({
+  user: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true,
+    index: true
+  },
+
   deliveryNumber: {
     type: Number,
     required: true
@@ -136,5 +143,8 @@ purchaseDeliverySchema.pre('save', function(next) {
   this.updatedAt = new Date();
   next();
 });
+
+// Index to find deliveries by user
+purchaseDeliverySchema.index({ user: 1, deliveryNumber: 1 });
 
 module.exports = mongoose.model('PurchaseDelivery', purchaseDeliverySchema);

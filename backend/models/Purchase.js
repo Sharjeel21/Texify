@@ -2,10 +2,17 @@
 const mongoose = require('mongoose');
 
 const purchaseSchema = new mongoose.Schema({
+  user: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true,
+    index: true
+  },
+
   purchaseNumber: {
     type: Number,
-    required: true,
-    unique: true
+    required: true
+    // unique: true removed here
   },
   party: {
     type: mongoose.Schema.Types.ObjectId,
@@ -110,5 +117,8 @@ purchaseSchema.pre('save', function(next) {
   this.updatedAt = new Date();
   next();
 });
+
+// Compound index for uniqueness per user
+purchaseSchema.index({ user: 1, purchaseNumber: 1 }, { unique: true });
 
 module.exports = mongoose.model('Purchase', purchaseSchema);

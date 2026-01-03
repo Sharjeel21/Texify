@@ -28,6 +28,13 @@ const baleSchema = new mongoose.Schema({
 });
 
 const deliveryChallanSchema = new mongoose.Schema({
+  user: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true,
+    index: true
+  },
+
   challanNumber: {
     type: Number,  // Changed to Number for simple numbering
     required: true
@@ -97,5 +104,8 @@ deliveryChallanSchema.pre('save', function(next) {
   this.updatedAt = new Date();
   next();
 });
+
+// Compound index: Challan Number unique per user
+deliveryChallanSchema.index({ user: 1, challanNumber: 1 }, { unique: true });
 
 module.exports = mongoose.model('DeliveryChallan', deliveryChallanSchema);

@@ -2,6 +2,13 @@
 const mongoose = require('mongoose');
 
 const partySchema = new mongoose.Schema({
+  user: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true,
+    index: true
+  },
+
   name: {
     type: String,
     required: true
@@ -12,8 +19,8 @@ const partySchema = new mongoose.Schema({
   },
   gstNumber: {
     type: String,
-    required: true,
-    unique: true
+    required: true
+    // unique: true removed here
   },
   state: {
     type: String,
@@ -28,5 +35,8 @@ const partySchema = new mongoose.Schema({
     default: Date.now
   }
 });
+
+// Compound index for uniqueness per user
+partySchema.index({ user: 1, gstNumber: 1 }, { unique: true });
 
 module.exports = mongoose.model('Party', partySchema);

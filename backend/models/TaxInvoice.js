@@ -22,10 +22,17 @@ const challanDetailSchema = new mongoose.Schema({
 });
 
 const taxInvoiceSchema = new mongoose.Schema({
+  user: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true,
+    index: true
+  },
+
   billNumber: {
     type: Number,
-    required: true,
-    unique: true
+    required: true
+    // unique: true removed here
   },
   date: {
     type: Date,
@@ -82,9 +89,9 @@ const taxInvoiceSchema = new mongoose.Schema({
   }
 });
 
-// Index for faster queries
-taxInvoiceSchema.index({ billNumber: 1 });
-taxInvoiceSchema.index({ party: 1, date: -1 });
-taxInvoiceSchema.index({ dealId: 1 });
+// COMPOUND INDICES
+taxInvoiceSchema.index({ user: 1, billNumber: 1 }, { unique: true });
+taxInvoiceSchema.index({ user: 1, party: 1, date: -1 });
+taxInvoiceSchema.index({ user: 1, dealId: 1 });
 
 module.exports = mongoose.model('TaxInvoice', taxInvoiceSchema);
