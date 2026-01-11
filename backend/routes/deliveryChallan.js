@@ -1,4 +1,4 @@
-// backend/routes/deliveryChallan.js - SECURED
+// backend/routes/deliveryChallan.js - FIXED Available Route
 const express = require('express');
 const router = express.Router();
 const DeliveryChallan = require('../models/DeliveryChallan');
@@ -32,9 +32,18 @@ router.get('/', authenticate, async (req, res) => {
 // Get challans by quality (user's own only)
 router.get('/by-quality/:qualityId', 
   authenticate,
-  verifyRelatedOwnership(Quality, 'qualityId'),
   async (req, res) => {
     try {
+      // Verify quality belongs to user
+      const quality = await Quality.findOne({ 
+        _id: req.params.qualityId,
+        user: req.userId 
+      });
+      
+      if (!quality) {
+        return res.status(404).json({ message: 'Quality not found or access denied' });
+      }
+
       const challans = await DeliveryChallan.find({ 
         user: req.userId,
         quality: req.params.qualityId
@@ -43,6 +52,7 @@ router.get('/by-quality/:qualityId',
         .sort({ createdAt: -1 });
       res.json(challans);
     } catch (error) {
+      console.error('Error in by-quality route:', error);
       res.status(500).json({ message: error.message });
     }
   }
@@ -51,9 +61,18 @@ router.get('/by-quality/:qualityId',
 // Get incomplete challans by quality
 router.get('/incomplete/:qualityId', 
   authenticate,
-  verifyRelatedOwnership(Quality, 'qualityId'),
   async (req, res) => {
     try {
+      // Verify quality belongs to user
+      const quality = await Quality.findOne({ 
+        _id: req.params.qualityId,
+        user: req.userId 
+      });
+      
+      if (!quality) {
+        return res.status(404).json({ message: 'Quality not found or access denied' });
+      }
+
       const challans = await DeliveryChallan.find({ 
         user: req.userId,
         quality: req.params.qualityId,
@@ -64,17 +83,39 @@ router.get('/incomplete/:qualityId',
         .sort({ createdAt: -1 });
       res.json(challans);
     } catch (error) {
+      console.error('Error in incomplete route:', error);
       res.status(500).json({ message: error.message });
     }
   }
 );
 
-// Get available challans for billing (complete and not sold)
+// Get available challans for billing (complete and not sold) - FIXED
 router.get('/available/:qualityId', 
   authenticate,
-  verifyRelatedOwnership(Quality, 'qualityId'),
   async (req, res) => {
     try {
+      console.log('Fetching available challans for quality:', req.params.qualityId);
+      console.log('User ID:', req.userId);
+      
+      // Validate qualityId
+      if (!mongoose.Types.ObjectId.isValid(req.params.qualityId)) {
+        return res.status(400).json({ message: 'Invalid quality ID format' });
+      }
+
+      // Verify quality exists and belongs to user
+      const quality = await Quality.findOne({ 
+        _id: req.params.qualityId,
+        user: req.userId 
+      });
+      
+      if (!quality) {
+        console.log('Quality not found for ID:', req.params.qualityId);
+        return res.status(404).json({ message: 'Quality not found or access denied' });
+      }
+
+      console.log('Quality found:', quality.name);
+
+      // Find available challans
       const challans = await DeliveryChallan.find({ 
         user: req.userId,
         quality: req.params.qualityId,
@@ -83,9 +124,16 @@ router.get('/available/:qualityId',
       })
         .populate('quality')
         .sort({ createdAt: -1 });
+      
+      console.log(`Found ${challans.length} available challans`);
       res.json(challans);
     } catch (error) {
-      res.status(500).json({ message: error.message });
+      console.error('Error in available route:', error);
+      console.error('Stack trace:', error.stack);
+      res.status(500).json({ 
+        message: error.message,
+        error: process.env.NODE_ENV === 'development' ? error.stack : undefined
+      });
     }
   }
 );
@@ -111,7 +159,6 @@ router.get('/:id', authenticate, verifyOwnership(DeliveryChallan), async (req, r
 router.post('/', 
   authenticate, 
   secureCreate,
-  verifyRelatedOwnership(Quality, 'quality'),
   async (req, res) => {
     const session = await mongoose.startSession();
     session.startTransaction();
@@ -255,6 +302,9 @@ router.post('/:id/add-bales',
       const previousStatus = challan.status;
       await challan.save({ session });
       
+      console.log(`Challan status after save: ${challan.status}`);
+      console.log(`Bales count: ${challan.bales.length}/${challan.expectedBalesCount}`);
+      
       // If challan just became complete and linked to a deal, update deal
       if (previousStatus === 'incomplete' && challan.status === 'complete' && dealId) {
         const deal = await Deal.findOne({ 
@@ -279,6 +329,7 @@ router.post('/:id/add-bales',
       res.json(updatedChallan);
     } catch (error) {
       await session.abortTransaction();
+      console.error('Error adding bales:', error);
       res.status(400).json({ message: error.message });
     } finally {
       session.endSession();

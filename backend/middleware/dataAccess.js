@@ -1,4 +1,4 @@
-// backend/middleware/dataAccess.js
+// backend/middleware/dataAccess.js - FIXED
 const mongoose = require('mongoose');
 
 /**
@@ -61,14 +61,23 @@ const verifyOwnership = (Model) => {
 };
 
 // ============================================
-// Verify Related Resource Ownership
+// Verify Related Resource Ownership - FIXED
 // ============================================
 const verifyRelatedOwnership = (RelatedModel, fieldName) => {
   return async (req, res, next) => {
     try {
-      const relatedId = req.body[fieldName] || req.params[fieldName];
+      // Try to get the field value from multiple sources
+      let relatedId = req.body?.[fieldName] || 
+                      req.params?.[fieldName] || 
+                      req.query?.[fieldName];
       
+      // If not found directly, log what we have for debugging
       if (!relatedId) {
+        console.log('Field name:', fieldName);
+        console.log('req.body:', req.body);
+        console.log('req.params:', req.params);
+        console.log('req.query:', req.query);
+        
         return next(); // Field not provided, skip check
       }
       
@@ -89,7 +98,7 @@ const verifyRelatedOwnership = (RelatedModel, fieldName) => {
       }
       
       // Check if related resource belongs to the current user
-      if (relatedResource.user.toString() !== req.userId.toString()) {
+      if (relatedResource.user && relatedResource.user.toString() !== req.userId.toString()) {
         return res.status(403).json({
           success: false,
           error: `Access denied. The specified ${fieldName} does not belong to you.`
