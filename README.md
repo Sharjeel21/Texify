@@ -39,5 +39,5 @@ Follow these instructions to run the project locally.
 
 ### 1. Clone the Repository
 ```bash
-git clone [https://github.com/your-username/texify.git](https://github.com/your-username/texify.git)
+git clone [https://github.com/Sharjeel21/Texify.git)
 cd texify
