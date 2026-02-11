@@ -1,23 +1,50 @@
+// frontend/src/pages/ViewInvoices.js
 import React, { useState, useEffect, useRef } from 'react';
-import { taxInvoiceAPI, companySettingsAPI } from '../services/api';
+import { taxInvoiceAPI, companySettingsAPI, partyAPI, qualityAPI } from '../services/api';
 import { useReactToPrint } from 'react-to-print';
+import { ResponsiveTable } from '../components/ResponsiveTable';
+import { 
+  Printer, 
+  Trash2, 
+  DollarSign,
+  CheckCircle,
+  AlertCircle,
+  Filter
+} from 'lucide-react';
 
 function ViewInvoices() {
   const [invoices, setInvoices] = useState([]);
+  const [parties, setParties] = useState([]);
+  const [qualities, setQualities] = useState([]);
   const [selectedInvoice, setSelectedInvoice] = useState(null);
   const [companySettings, setCompanySettings] = useState(null);
   const [message, setMessage] = useState({ type: '', text: '' });
+  const [filterParty, setFilterParty] = useState('all');
+  const [filterQuality, setFilterQuality] = useState('all');
+  const [showFilters, setShowFilters] = useState(false);
   const printRef = useRef(null);
 
   useEffect(() => {
     fetchInvoices();
     fetchCompanySettings();
+    fetchParties();
+    fetchQualities();
   }, []);
 
   const fetchInvoices = async () => {
     try {
       const response = await taxInvoiceAPI.getAll();
       setInvoices(response.data);
+      
+      // Debug: Log first invoice to see structure
+      if (response.data && response.data.length > 0) {
+        console.log('Sample Invoice Structure:', {
+          party: response.data[0].party,
+          partyDetails: response.data[0].partyDetails,
+          quality: response.data[0].quality,
+          qualityName: response.data[0].qualityName
+        });
+      }
     } catch (error) {
       console.error('Error fetching invoices:', error);
     }
@@ -34,11 +61,29 @@ function ViewInvoices() {
     }
   };
 
+  const fetchParties = async () => {
+    try {
+      const response = await partyAPI.getAll();
+      setParties(response.data);
+    } catch (error) {
+      console.error('Error fetching parties:', error);
+    }
+  };
+
+  const fetchQualities = async () => {
+    try {
+      const response = await qualityAPI.getAll();
+      setQualities(response.data);
+    } catch (error) {
+      console.error('Error fetching qualities:', error);
+    }
+  };
+
   const handleDelete = async (id) => {
     if (window.confirm('Are you sure you want to delete this tax invoice? This will mark the associated challans as unsold.')) {
       try {
         await taxInvoiceAPI.delete(id);
-        setMessage({ type: 'success', text: 'Tax invoice deleted successfully!' });
+        setMessage({ type: 'success', text: '✓ Tax invoice deleted successfully!' });
         fetchInvoices();
         setTimeout(() => setMessage({ type: '', text: '' }), 3000);
       } catch (error) {
@@ -70,6 +115,28 @@ function ViewInvoices() {
     `,
     documentTitle: 'Tax Invoice'
   });
+
+ const getFilteredInvoices = () => {
+  let filtered = [...invoices]; // Creates a copy instead of reference
+
+  if (filterParty !== 'all') {
+    filtered = filtered.filter(inv => {
+      const partyId = inv.party?._id || inv.party || inv.partyDetails?._id;
+      return partyId === filterParty;
+    });
+  }
+
+  if (filterQuality !== 'all') {
+    filtered = filtered.filter(inv => {
+      const qualityId = inv.quality?._id || inv.quality;
+      return qualityId === filterQuality;
+    });
+  }
+
+  return filtered;
+};
+
+  const filteredInvoices = getFilteredInvoices();
 
   const calculateTotals = (invoice) => {
     const totalPieces = invoice.totalPieces || 0;
@@ -148,6 +215,88 @@ function ViewInvoices() {
     return bales.slice(0, 10);
   };
 
+  // Table columns configuration
+  const columns = [
+    {
+      key: 'billNumber',
+      header: 'Bill No.',
+      render: (invoice) => (
+        <span className="font-bold text-amber-700">{invoice.billNumber}</span>
+      )
+    },
+    {
+      key: 'date',
+      header: 'Date',
+      render: (invoice) => (
+        <span className="text-sm text-gray-600">
+          {new Date(invoice.date).toLocaleDateString()}
+        </span>
+      )
+    },
+    {
+      key: 'party',
+      header: 'Party',
+      render: (invoice) => (
+        <span className="font-medium text-gray-900">{invoice.partyDetails?.name}</span>
+      )
+    },
+    {
+      key: 'quality',
+      header: 'Quality',
+      render: (invoice) => (
+        <span className="text-sm text-gray-700">{invoice.qualityName}</span>
+      )
+    },
+    {
+      key: 'challans',
+      header: 'Challans',
+      render: (invoice) => (
+        <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-gradient-to-r from-blue-100 to-cyan-100 text-blue-800 border border-blue-300">
+          {invoice.challanDetails?.length} challan(s)
+        </span>
+      )
+    },
+    {
+      key: 'amount',
+      header: 'Total Amount',
+      render: (invoice) => (
+        <span className="font-bold text-green-700">₹{Math.round(invoice.totalAmount)}</span>
+      )
+    },
+    {
+      key: 'actions',
+      header: 'Actions',
+      render: (invoice) => (
+        <div className="flex flex-wrap gap-2">
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setSelectedInvoice(invoice);
+              setTimeout(handlePrint, 100);
+            }}
+            className="inline-flex items-center gap-1 px-3 py-1.5 text-sm font-semibold rounded-lg bg-gradient-to-r from-amber-500 to-orange-600 text-white hover:from-amber-600 hover:to-orange-700 transition-all shadow-sm hover:shadow-md"
+            title="Print Invoice"
+          >
+            <Printer className="w-4 h-4" />
+            <span className="hidden md:inline">Print</span>
+          </button>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              handleDelete(invoice._id);
+            }}
+            className="inline-flex items-center gap-1 px-3 py-1.5 text-sm font-semibold rounded-lg bg-gradient-to-r from-red-500 to-rose-600 text-white hover:from-red-600 hover:to-rose-700 transition-all shadow-sm hover:shadow-md"
+            title="Delete Invoice"
+          >
+            <Trash2 className="w-4 h-4" />
+            <span className="hidden md:inline">Delete</span>
+          </button>
+        </div>
+      )
+    }
+  ];
+
+
   const PrintableInvoice = () => {
     const invoice = selectedInvoice;
     if (!invoice) return null;
@@ -155,27 +304,22 @@ function ViewInvoices() {
     const totals = calculateTotals(invoice);
     const baleRows = extractBales(invoice);
     
-    // Extract all settings with proper defaults
     const format = companySettings?.invoiceFormat || {};
     
-    // Display settings
     const showLogo = format.showLogo !== false;
     const logoPosition = format.logoPosition || 'left';
     const showBankDetails = format.showBankDetails !== false;
     const showTerms = format.showTerms !== false;
     
-    // Typography settings
     const fontFamily = format.fontFamily || 'Segoe UI';
     const fontWeight = format.fontWeight || 'normal';
     const baseFontSize = format.fontSize?.base || 11;
     const companyNameSize = format.fontSize?.companyName || 48;
     const headingSize = format.fontSize?.heading || 12;
     
-    // Color mode
     const colorMode = format.colorMode || 'color';
     const isBlackWhite = colorMode === 'black_white';
     
-    // Dynamic colors based on mode
     const textColor = isBlackWhite ? '#000000' : '#212529';
     const headerBg = isBlackWhite ? '#ffffff' : '#f8f9fa';
     const tableBg = isBlackWhite ? '#f5f5f5' : '#e9ecef';
@@ -186,7 +330,6 @@ function ViewInvoices() {
     
     const hasLogo = showLogo && companySettings?.logo;
 
-    // Base cell style with applied settings
     const cellStyle = {
       border: `1px solid ${borderColor}`,
       padding: '4px 7px',
@@ -226,7 +369,6 @@ function ViewInvoices() {
             background: headerBg,
             position: 'relative'
           }}>
-            {/* Logo - positioned based on settings */}
             {hasLogo && (
               <div style={{
                 position: 'absolute',
@@ -248,7 +390,6 @@ function ViewInvoices() {
               </div>
             )}
             
-            {/* Company details - centered with padding for logo */}
             <div style={{
               textAlign: 'center',
               paddingLeft: hasLogo && logoPosition === 'left' ? '110px' : '0',
@@ -399,7 +540,7 @@ function ViewInvoices() {
             </tbody>
           </table>
 
-          {/* Items Table - UPDATED WITH BORDERLESS ROWS */}
+          {/* Items Table */}
           <table style={{ width: '100%', borderCollapse: 'collapse', flex: '1' }}>
             <thead>
               <tr style={{ borderBottom: `2px solid ${borderColor}`, background: tableBg }}>
@@ -853,70 +994,106 @@ function ViewInvoices() {
   };
 
   return (
-    <div className="page-container">
-      <h1 className="page-title">View Tax Invoices</h1>
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+      {/* Header */}
+      <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
+        <div>
+          <h1 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-amber-700 to-orange-600 bg-clip-text text-transparent mb-2">
+            View Tax Invoices
+          </h1>
+          <p className="text-base text-gray-600 font-medium">
+            View and manage your tax invoices
+          </p>
+        </div>
+        <button 
+          onClick={() => setShowFilters(!showFilters)} 
+          className="inline-flex items-center justify-center gap-2 px-6 py-2.5 font-semibold rounded-lg bg-gradient-to-r from-amber-500 to-orange-600 text-white hover:from-amber-600 hover:to-orange-700 transition-all shadow-sm hover:shadow-md w-full md:w-auto md:hidden"
+        >
+          <Filter className="w-5 h-5" />
+          {showFilters ? 'Hide Filters' : 'Show Filters'}
+        </button>
+      </div>
 
+      {/* Alert Messages */}
       {message.text && (
-        <div className={`alert alert-${message.type}`}>
-          {message.text}
+        <div className={`p-4 rounded-lg border-l-4 flex items-center gap-3 ${
+          message.type === 'success' 
+            ? 'bg-gradient-to-r from-green-50 to-emerald-50 border-green-500 text-green-800'
+            : 'bg-gradient-to-r from-red-50 to-rose-50 border-red-500 text-red-800'
+        }`}>
+          {message.type === 'success' ? (
+            <CheckCircle className="w-5 h-5 flex-shrink-0" />
+          ) : (
+            <AlertCircle className="w-5 h-5 flex-shrink-0" />
+          )}
+          <span>{message.text}</span>
         </div>
       )}
 
-      <div className="table-container">
-        <table>
-          <thead>
-            <tr>
-              <th>Bill No.</th>
-              <th>Date</th>
-              <th>Party</th>
-              <th>Quality</th>
-              <th>Challans</th>
-              <th>Total Amount</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {invoices.map((invoice) => (
-              <tr key={invoice._id}>
-                <td><strong>{invoice.billNumber}</strong></td>
-                <td>{new Date(invoice.date).toLocaleDateString()}</td>
-                <td>{invoice.partyDetails?.name}</td>
-                <td>{invoice.qualityName}</td>
-                <td>{invoice.challanDetails?.length} challan(s)</td>
-                <td><strong>₹{Math.round(invoice.totalAmount)}</strong></td>
-                <td>
-                  <button
-                    onClick={() => {
-                      setSelectedInvoice(invoice);
-                      setTimeout(handlePrint, 100);
-                    }}
-                    className="btn btn-primary btn-small"
-                    style={{ marginRight: '0.5rem' }}
-                  >
-                    Print
-                  </button>
-                  <button
-                    onClick={() => handleDelete(invoice._id)}
-                    className="btn btn-danger btn-small"
-                  >
-                    Delete
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-        {invoices.length === 0 && (
-          <p style={{ textAlign: 'center', padding: '2rem', color: '#777' }}>
-            No tax invoices found.
-          </p>
-        )}
+      {/* Filters Card */}
+      <div className={`bg-white rounded-xl shadow-sm border-2 border-amber-200 p-6 transition-all ${showFilters ? 'block' : 'hidden md:block'}`}>
+        <div className="flex items-center gap-2 mb-4">
+          <Filter className="w-5 h-5 text-amber-600" />
+          <h2 className="text-lg font-bold text-gray-900">Filter Invoices</h2>
+        </div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block mb-2 text-sm font-semibold text-gray-700">Filter by Party:</label>
+            <select 
+              value={filterParty} 
+              onChange={(e) => setFilterParty(e.target.value)} 
+              className="w-full px-4 py-2.5 border-2 border-gray-300 rounded-lg focus:border-amber-500 focus:ring-4 focus:ring-amber-100 transition-all"
+            >
+              <option value="all">All Parties</option>
+              {parties.map(party => (
+                <option key={party._id} value={party._id}>{party.name}</option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block mb-2 text-sm font-semibold text-gray-700">Filter by Quality:</label>
+            <select 
+              value={filterQuality} 
+              onChange={(e) => setFilterQuality(e.target.value)} 
+              className="w-full px-4 py-2.5 border-2 border-gray-300 rounded-lg focus:border-amber-500 focus:ring-4 focus:ring-amber-100 transition-all"
+            >
+              <option value="all">All Qualities</option>
+              {qualities.map(quality => (
+                <option key={quality._id} value={quality._id}>{quality.name}</option>
+              ))}
+            </select>
+          </div>
+        </div>
       </div>
 
-      <div style={{ display: 'none' }}>
-        <div ref={printRef}>
-          <PrintableInvoice />
+      {/* Invoices Table */}
+      {filteredInvoices.length === 0 ? (
+        <div className="bg-white rounded-xl shadow-sm border-2 border-dashed border-gray-300 p-12 text-center">
+          <DollarSign className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+          <h3 className="text-xl font-bold text-gray-900 mb-2">No Invoices Found</h3>
+          <p className="text-gray-600">
+            {invoices.length === 0 
+              ? "You haven't created any tax invoices yet." 
+              : "No invoices match the selected filters."}
+          </p>
         </div>
+      ) : (
+        <ResponsiveTable
+          columns={columns}
+          data={filteredInvoices}
+          className="hover:bg-amber-50"
+        />
+      )}
+
+      {/* Hidden Print Component */}
+      <div style={{ position: 'absolute', left: '-9999px', top: '-9999px', width: '210mm', overflow: 'hidden' }}>
+        {selectedInvoice && (
+          <div ref={printRef}>
+            <PrintableInvoice />
+          </div>
+        )}
       </div>
     </div>
   );

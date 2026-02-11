@@ -1,7 +1,7 @@
-//fronend/src/pages/InvoiceDetails.js
+// frontend/src/pages/InvoiceDetails.js
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Printer } from 'lucide-react';
+import { Printer, ArrowLeft, AlertCircle } from 'lucide-react';
 import api from '../services/api';
 import '../components/InvoicePrint.css';
 
@@ -74,11 +74,28 @@ const InvoiceDetail = () => {
   };
 
   if (loading) {
-    return <div className="loading">Loading invoice...</div>;
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-amber-50 to-orange-50">
+        <div className="text-center space-y-4">
+          <div className="w-16 h-16 border-4 border-amber-200 border-t-amber-600 rounded-full animate-spin mx-auto"></div>
+          <p className="text-gray-600 font-medium">Loading invoice...</p>
+        </div>
+      </div>
+    );
   }
 
   if (!invoiceData) {
-    return <div className="error">Invoice not found</div>;
+    return (
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <div className="bg-gradient-to-r from-red-50 to-rose-50 border-l-4 border-red-500 text-red-800 p-6 rounded-lg flex items-center gap-3">
+          <AlertCircle className="w-6 h-6 flex-shrink-0" />
+          <div>
+            <h3 className="font-bold text-lg mb-1">Invoice Not Found</h3>
+            <p className="text-sm">The requested invoice could not be found.</p>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   const calculateTotals = () => {
@@ -118,27 +135,24 @@ const InvoiceDetail = () => {
   const bales = getAllBales();
 
   return (
-    <div className="invoice-wrapper">
-      <div className="no-print">
-        <button 
-          onClick={() => navigate('/view-invoices')} 
-          style={{
-            margin: '20px',
-            marginRight: '10px',
-            padding: '10px 20px',
-            background: '#6b7280',
-            color: 'white',
-            border: 'none',
-            borderRadius: '6px',
-            cursor: 'pointer'
-          }}
-        >
-          ← Back to Invoices
-        </button>
-        <button onClick={handlePrint} className="print-button">
-          <Printer size={20} />
-          Print Invoice
-        </button>
+    <div className="invoice-wrapper min-h-screen bg-gradient-to-br from-gray-50 to-slate-100">
+      <div className="no-print max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <div className="flex flex-wrap gap-3 mb-6">
+          <button 
+            onClick={() => navigate('/view-invoices')} 
+            className="inline-flex items-center gap-2 px-6 py-2.5 font-semibold rounded-lg bg-white border-2 border-gray-300 text-gray-700 hover:border-amber-500 hover:bg-amber-50 transition-all shadow-sm hover:shadow-md"
+          >
+            <ArrowLeft className="w-5 h-5" />
+            Back to Invoices
+          </button>
+          <button 
+            onClick={handlePrint} 
+            className="inline-flex items-center gap-2 px-6 py-2.5 font-semibold rounded-lg bg-gradient-to-r from-amber-500 to-orange-600 text-white hover:from-amber-600 hover:to-orange-700 transition-all shadow-sm hover:shadow-md"
+          >
+            <Printer className="w-5 h-5" />
+            Print Invoice
+          </button>
+        </div>
       </div>
 
       <div className="invoice-container">

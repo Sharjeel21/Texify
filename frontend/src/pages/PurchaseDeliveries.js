@@ -1,675 +1,586 @@
-// frontend/src/pages/PurchaseDeliveries.js
+// frontend/src/pages/PurchaseManagement.js
 import React, { useState, useEffect } from 'react';
-import { purchaseDeliveryAPI, purchaseAPI } from '../services/api';
+import { purchaseAPI, partyAPI } from '../services/api';
+import { Plus, Edit, Trash2, ShoppingCart, TrendingUp, AlertCircle } from 'lucide-react';
+import { ResponsiveTable } from '../components/ResponsiveTable';
+import { ResponsiveFormRow } from '../components/ResponsiveForm';
+import { cn } from '../lib/utils';
 
-const PurchaseDeliveries = () => {
-  const [deliveries, setDeliveries] = useState([]);
+const PurchaseManagement = () => {
   const [purchases, setPurchases] = useState([]);
+  const [parties, setParties] = useState([]);
   const [showForm, setShowForm] = useState(false);
-  const [showPaymentModal, setShowPaymentModal] = useState(false);
-  const [selectedDelivery, setSelectedDelivery] = useState(null);
+  const [editingPurchase, setEditingPurchase] = useState(null);
   const [filterStatus, setFilterStatus] = useState('all');
+  const [message, setMessage] = useState({ type: '', text: '' });
   
   const [formData, setFormData] = useState({
-    purchase: '',
-    deliveryDate: new Date().toISOString().split('T')[0],
-    actualWeight: '',
-    deductFromDeal: '',
-    supplierChallanNumber: '',
-    notes: ''
-  });
-
-  const [paymentData, setPaymentData] = useState({
-    amount: '',
-    paymentMethod: 'RTGS',
-    paymentDate: new Date().toISOString().split('T')[0],
-    transactionId: '',
-    chequeNumber: '',
-    chequeDate: '',
-    bankName: '',
+    party: '',
+    yarnType: 'Roto',
+    yarnQuality: '',
+    approxQuantity: '',
+    ratePerKg: '',
+    godownChargesPerKg: '0',
+    paymentType: 'Current',
+    paymentDays: '',
+    purchaseDate: new Date().toISOString().split('T')[0],
     notes: ''
   });
 
   useEffect(() => {
-    loadDeliveries();
     loadPurchases();
+    loadParties();
   }, []);
-
-  const loadDeliveries = async () => {
-    try {
-      const response = await purchaseDeliveryAPI.getAll();
-      setDeliveries(response.data);
-    } catch (error) {
-      alert('Failed to load deliveries');
-    }
-  };
 
   const loadPurchases = async () => {
     try {
       const response = await purchaseAPI.getAll();
-      setPurchases(response.data.filter(p => 
-        p.status !== 'completed' && 
-        (p.remainingApproxQuantity || 0) > 0
-      ));
+      setPurchases(response.data);
     } catch (error) {
-      alert('Failed to load purchases');
+      setMessage({ type: 'error', text: 'Failed to load purchases' });
+    }
+  };
+
+  const loadParties = async () => {
+    try {
+      const response = await partyAPI.getAll();
+      setParties(response.data);
+    } catch (error) {
+      setMessage({ type: 'error', text: 'Failed to load parties' });
     }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      await purchaseDeliveryAPI.create(formData);
+      if (editingPurchase) {
+        await purchaseAPI.update(editingPurchase._id, formData);
+        setMessage({ type: 'success', text: '✓ Purchase updated successfully!' });
+      } else {
+        await purchaseAPI.create(formData);
+        setMessage({ type: 'success', text: '✓ Purchase created successfully!' });
+      }
       resetForm();
-      loadDeliveries();
       loadPurchases();
+      setTimeout(() => setMessage({ type: '', text: '' }), 3000);
     } catch (error) {
-      alert(error.response?.data?.message || 'Failed to save delivery');
+      setMessage({ 
+        type: 'error', 
+        text: error.response?.data?.message || 'Error saving purchase!' 
+      });
     }
   };
 
-  const handlePaymentSubmit = async (e) => {
-    e.preventDefault();
-    try {
-      await purchaseDeliveryAPI.updatePayment(selectedDelivery._id, paymentData);
-      setShowPaymentModal(false);
-      setSelectedDelivery(null);
-      setPaymentData({ amountPaid: '' });
-      loadDeliveries();
-    } catch (error) {
-      alert(error.response?.data?.message || 'Failed to update payment');
-    }
+  const handleEdit = (purchase) => {
+    setEditingPurchase(purchase);
+    setFormData({
+      party: purchase.party._id,
+      yarnType: purchase.yarnType,
+      yarnQuality: purchase.yarnQuality,
+      approxQuantity: purchase.approxQuantity || '',
+      ratePerKg: purchase.ratePerKg,
+      godownChargesPerKg: purchase.godownChargesPerKg || '0',
+      paymentType: purchase.paymentType,
+      paymentDays: purchase.paymentDays,
+      purchaseDate: new Date(purchase.purchaseDate).toISOString().split('T')[0],
+      notes: purchase.notes || ''
+    });
+    setShowForm(true);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleDelete = async (id) => {
-    if (window.confirm('Are you sure you want to delete this delivery?')) {
+    if (window.confirm('Are you sure you want to delete this purchase?')) {
       try {
-        await purchaseDeliveryAPI.delete(id);
-        loadDeliveries();
+        await purchaseAPI.delete(id);
+        setMessage({ type: 'success', text: '✓ Purchase deleted successfully!' });
         loadPurchases();
+        setTimeout(() => setMessage({ type: '', text: '' }), 3000);
       } catch (error) {
-        alert(error.response?.data?.message || 'Failed to delete delivery');
+        setMessage({ 
+          type: 'error', 
+          text: error.response?.data?.message || 'Error deleting purchase!' 
+        });
       }
     }
   };
 
-  const openPaymentModal = (delivery) => {
-    setSelectedDelivery(delivery);
-    setPaymentData({ 
-      amount: delivery.pendingAmount.toFixed(2),
-      paymentMethod: 'RTGS',
-      paymentDate: new Date().toISOString().split('T')[0],
-      transactionId: '',
-      chequeNumber: '',
-      chequeDate: '',
-      bankName: '',
-      notes: ''
-    });
-    setShowPaymentModal(true);
-  };
-
   const resetForm = () => {
     setFormData({
-      purchase: '',
-      deliveryDate: new Date().toISOString().split('T')[0],
-      actualWeight: '',
-      deductFromDeal: '',
-      supplierChallanNumber: '',
+      party: '',
+      yarnType: 'Roto',
+      yarnQuality: '',
+      approxQuantity: '',
+      ratePerKg: '',
+      godownChargesPerKg: '0',
+      paymentType: 'Current',
+      paymentDays: '',
+      purchaseDate: new Date().toISOString().split('T')[0],
       notes: ''
     });
+    setEditingPurchase(null);
     setShowForm(false);
   };
 
-  const selectedPurchase = purchases.find(p => p._id === formData.purchase);
-
-  const filteredDeliveries = filterStatus === 'all' 
-    ? deliveries 
-    : deliveries.filter(d => d.paymentStatus === filterStatus);
-
-  const getPaymentStatusBadge = (status) => {
-    const badges = {
-      pending: 'badge-error',
-      partial: 'badge-warning',
-      paid: 'badge-success'
-    };
-    return badges[status] || 'badge';
+  const getFilteredPurchases = () => {
+    if (filterStatus === 'all') return purchases;
+    return purchases.filter(p => p.status === filterStatus);
   };
 
-  return (
-    <div className="page-container">
-      <div className="page-header">
-        <div className="flex justify-between items-center">
-          <div>
-            <h1 className="page-title">Purchase Deliveries</h1>
-            <p className="page-subtitle">Record actual weights and track payments</p>
+  const getStatusCounts = () => {
+    return {
+      all: purchases.length,
+      pending: purchases.filter(p => p.status === 'pending').length,
+      partial: purchases.filter(p => p.status === 'partial').length,
+      completed: purchases.filter(p => p.status === 'completed').length
+    };
+  };
+
+  const filteredPurchases = getFilteredPurchases();
+  const statusCounts = getStatusCounts();
+
+  const getStatusBadge = (status) => {
+    const badges = {
+      pending: 'bg-gradient-to-r from-amber-100 to-orange-100 text-amber-800 border-amber-300',
+      partial: 'bg-gradient-to-r from-blue-100 to-cyan-100 text-blue-800 border-blue-300',
+      completed: 'bg-gradient-to-r from-green-100 to-emerald-100 text-green-800 border-green-300'
+    };
+    return badges[status] || 'bg-gray-100 text-gray-800 border-gray-300';
+  };
+
+  const columns = [
+    {
+      key: 'purchaseNumber',
+      header: 'PO #',
+      render: (purchase) => (
+        <span className="font-bold text-amber-700">#{purchase.purchaseNumber}</span>
+      )
+    },
+    {
+      key: 'party',
+      header: 'Party',
+      render: (purchase) => (
+        <span className="font-semibold text-gray-900">{purchase.partyName}</span>
+      )
+    },
+    {
+      key: 'date',
+      header: 'Date',
+      render: (purchase) => (
+        <span className="text-gray-700">
+          {new Date(purchase.purchaseDate).toLocaleDateString()}
+        </span>
+      )
+    },
+    {
+      key: 'yarn',
+      header: 'Yarn',
+      render: (purchase) => (
+        <span className="text-gray-700">
+          {purchase.yarnType} {purchase.yarnQuality}
+        </span>
+      )
+    },
+    {
+      key: 'quantity',
+      header: 'Approx Qty',
+      render: (purchase) => (
+        <span className="font-semibold text-gray-900">
+          {purchase.approxQuantity || 0} T
+        </span>
+      )
+    },
+    {
+      key: 'actualWeight',
+      header: 'Actual Weight',
+      render: (purchase) => {
+        const totalActualWeight = purchase.totalActualWeight || 0;
+        return (
+          <span className="font-bold text-green-700">
+            {totalActualWeight.toFixed(3)} T
+          </span>
+        );
+      }
+    },
+    {
+      key: 'remaining',
+      header: 'Remaining',
+      render: (purchase) => {
+        const remainingQuantity = purchase.remainingApproxQuantity !== undefined 
+          ? purchase.remainingApproxQuantity 
+          : (purchase.approxQuantity || 0);
+        return (
+          <span className="font-bold text-amber-700">
+            {remainingQuantity.toFixed(3)} T
+          </span>
+        );
+      }
+    },
+    {
+      key: 'rate',
+      header: 'Rate/Kg',
+      render: (purchase) => (
+        <span className="font-semibold text-gray-900">₹{purchase.ratePerKg}</span>
+      )
+    },
+    {
+      key: 'godown',
+      header: 'Godown ₹/Kg',
+      render: (purchase) => {
+        const godownCharges = purchase.godownChargesPerKg || 0;
+        return godownCharges > 0 ? (
+          <span className="text-red-600 font-semibold">₹{godownCharges}</span>
+        ) : (
+          <span className="text-gray-400">-</span>
+        );
+      }
+    },
+    {
+      key: 'payment',
+      header: 'Payment',
+      render: (purchase) => (
+        <span className="text-sm text-gray-700">
+          {purchase.paymentType} ({purchase.paymentDays}d)
+        </span>
+      )
+    },
+    {
+      key: 'status',
+      header: 'Status',
+      render: (purchase) => (
+        <span className={cn(
+          'inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold border',
+          getStatusBadge(purchase.status)
+        )}>
+          {purchase.status.toUpperCase()}
+        </span>
+      )
+    },
+    {
+      key: 'actions',
+      header: 'Actions',
+      render: (purchase) => {
+        const totalActualWeight = purchase.totalActualWeight || 0;
+        return (
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                handleEdit(purchase);
+              }}
+              className="inline-flex items-center gap-1 px-3 py-1.5 text-sm font-semibold rounded-lg bg-gradient-to-r from-blue-500 to-cyan-600 text-white hover:from-blue-600 hover:to-cyan-700 transition-all shadow-sm hover:shadow-md"
+            >
+              <Edit className="w-4 h-4" />
+              Edit
+            </button>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                handleDelete(purchase._id);
+              }}
+              disabled={totalActualWeight > 0}
+              className={cn(
+                "inline-flex items-center gap-1 px-3 py-1.5 text-sm font-semibold rounded-lg transition-all shadow-sm",
+                totalActualWeight > 0
+                  ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                  : "bg-gradient-to-r from-red-500 to-rose-600 text-white hover:from-red-600 hover:to-rose-700 hover:shadow-md"
+              )}
+            >
+              <Trash2 className="w-4 h-4" />
+              Delete
+            </button>
           </div>
-          <button className="btn btn-primary" onClick={() => setShowForm(true)}>
-            + Record Delivery
-          </button>
+        );
+      }
+    }
+  ];
+
+  return (
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+      {/* Header */}
+      <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
+        <div>
+          <h1 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-amber-700 to-orange-600 bg-clip-text text-transparent mb-2">
+            Purchase Management
+          </h1>
+          <p className="text-base text-gray-600 font-medium">
+            Manage yarn purchases with flexible weight tracking
+          </p>
         </div>
+        {!showForm && (
+          <button
+            onClick={() => setShowForm(true)}
+            className="inline-flex items-center justify-center gap-2 px-6 py-2.5 font-semibold rounded-lg bg-gradient-to-r from-amber-500 to-orange-600 text-white hover:from-amber-600 hover:to-orange-700 transition-all shadow-sm hover:shadow-md w-full md:w-auto"
+          >
+            <Plus className="w-5 h-5" />
+            New Purchase
+          </button>
+        )}
       </div>
 
+      {/* Alert Messages */}
+      {message.text && (
+        <div className={`p-4 rounded-lg border-l-4 ${
+          message.type === 'success' 
+            ? 'bg-gradient-to-r from-green-50 to-emerald-50 border-green-500 text-green-800'
+            : 'bg-gradient-to-r from-red-50 to-rose-50 border-red-500 text-red-800'
+        }`}>
+          {message.text}
+        </div>
+      )}
+
+      {/* Form Modal */}
       {showForm && (
-        <div className="modal-overlay" onClick={resetForm}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h3 className="modal-title">Record Yarn Delivery</h3>
-              <button className="modal-close" onClick={resetForm}>×</button>
+        <div 
+          className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+          onClick={resetForm}
+        >
+          <div 
+            className="bg-gradient-to-br from-white to-amber-50 rounded-2xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto border-2 border-amber-200"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="sticky top-0 px-6 py-4 border-b-2 border-amber-200 bg-gradient-to-r from-amber-100 to-orange-100 rounded-t-2xl flex justify-between items-center z-10">
+              <h3 className="text-xl font-bold text-gray-900">
+                {editingPurchase ? 'Edit Purchase' : 'New Purchase Order'}
+              </h3>
+              <button 
+                onClick={resetForm}
+                className="text-gray-600 hover:text-gray-900 text-2xl leading-none"
+              >
+                ×
+              </button>
             </div>
             
-            <div className="modal-body">
-              <form onSubmit={handleSubmit} className="form-container">
-                <div className="form-group">
-                  <label className="form-label">Purchase Order *</label>
+            <form onSubmit={handleSubmit} className="px-6 py-4 space-y-6">
+              <ResponsiveFormRow>
+                <div className="space-y-2">
+                  <label className="block text-sm font-semibold text-gray-700">
+                    Party *
+                  </label>
                   <select
-                    className="form-control"
-                    value={formData.purchase}
-                    onChange={(e) => setFormData({...formData, purchase: e.target.value})}
+                    value={formData.party}
+                    onChange={(e) => setFormData({...formData, party: e.target.value})}
                     required
+                    className="w-full px-4 py-2.5 border-2 border-gray-300 rounded-lg focus:border-amber-500 focus:ring-4 focus:ring-amber-100 bg-white cursor-pointer transition-all"
                   >
-                    <option value="">Select Purchase Order</option>
-                    {purchases.map(purchase => (
-                      <option key={purchase._id} value={purchase._id}>
-                        PO#{purchase.purchaseNumber} - {purchase.partyName} - {purchase.yarnType} {purchase.yarnQuality} 
-                        (Remaining: {purchase.remainingApproxQuantity.toFixed(3)}T)
-                      </option>
+                    <option value="">Select Party</option>
+                    {parties.map(party => (
+                      <option key={party._id} value={party._id}>{party.name}</option>
                     ))}
                   </select>
                 </div>
 
-                {selectedPurchase && (
-                  <div className="card card-premium mb-3">
-                    <div className="card-body">
-                      <h4 className="card-title">Purchase Details</h4>
-                      <div className="document-info">
-                        <div className="document-info-item">
-                          <span className="document-info-label">Party</span>
-                          <span className="document-info-value">{selectedPurchase.partyName}</span>
-                        </div>
-                        <div className="document-info-item">
-                          <span className="document-info-label">Yarn</span>
-                          <span className="document-info-value">{selectedPurchase.yarnType} - {selectedPurchase.yarnQuality}</span>
-                        </div>
-                        <div className="document-info-item">
-                          <span className="document-info-label">Rate per Kg</span>
-                          <span className="document-info-value">₹{selectedPurchase.ratePerKg}</span>
-                        </div>
-                        <div className="document-info-item">
-                          <span className="document-info-label">Godown Charges</span>
-                          <span className="document-info-value">₹{selectedPurchase.godownChargesPerKg}/kg</span>
-                        </div>
-                        <div className="document-info-item">
-                          <span className="document-info-label">Deal Quantity</span>
-                          <span className="document-info-value">{selectedPurchase.approxQuantity} Tons</span>
-                        </div>
-                        <div className="document-info-item">
-                          <span className="document-info-label">Remaining</span>
-                          <span className="document-info-value text-warning-bold">{selectedPurchase.remainingApproxQuantity.toFixed(3)} Tons</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                <div className="form-row">
-                  <div className="form-group">
-                    <label className="form-label">Delivery Date *</label>
-                    <input
-                      type="date"
-                      className="form-control"
-                      value={formData.deliveryDate}
-                      onChange={(e) => setFormData({...formData, deliveryDate: e.target.value})}
-                      required
-                    />
-                  </div>
-
-                  <div className="form-group">
-                    <label className="form-label">Actual Weight Received (Tons) *</label>
-                    <input
-                      type="number"
-                      step="0.001"
-                      className="form-control"
-                      value={formData.actualWeight}
-                      onChange={(e) => {
-                        const value = e.target.value;
-                        setFormData({
-                          ...formData, 
-                          actualWeight: value,
-                          deductFromDeal: value
-                        });
-                      }}
-                      onClick={(e) => e.stopPropagation()}
-                      placeholder="e.g., 2.378"
-                      required
-                    />
-                    <small style={{color: 'var(--text-secondary)'}}>
-                      Exact weight for payment calculation
-                    </small>
-                  </div>
-                </div>
-
-                <div className="form-group">
-                  <label className="form-label">Deduct from Deal (Tons) *</label>
+                <div className="space-y-2">
+                  <label className="block text-sm font-semibold text-gray-700">
+                    Purchase Date *
+                  </label>
                   <input
-                    type="number"
-                    step="0.001"
-                    className="form-control"
-                    value={formData.deductFromDeal}
-                    onChange={(e) => setFormData({...formData, deductFromDeal: e.target.value})}
-                    onClick={(e) => e.stopPropagation()}
-                    max={selectedPurchase?.remainingApproxQuantity}
-                    placeholder="e.g., 2.000"
+                    type="date"
+                    value={formData.purchaseDate}
+                    onChange={(e) => setFormData({...formData, purchaseDate: e.target.value})}
                     required
-                  />
-                  <small style={{color: 'var(--text-secondary)'}}>
-                    Amount to deduct from purchase deal (can differ from actual weight)
-                  </small>
-                </div>
-
-                {selectedPurchase && formData.actualWeight && formData.deductFromDeal && (
-                  <div className="card card-success mb-3">
-                    <div className="card-body">
-                      <h4 className="card-title">Delivery Summary</h4>
-                      <div className="document-info">
-                        <div className="document-info-item">
-                          <span className="document-info-label">Actual Weight (Payment)</span>
-                          <span className="document-info-value text-success-bold">
-                            {parseFloat(formData.actualWeight).toFixed(3)} T
-                          </span>
-                        </div>
-                        <div className="document-info-item">
-                          <span className="document-info-label">Deduct from Deal</span>
-                          <span className="document-info-value text-warning-bold">
-                            {parseFloat(formData.deductFromDeal).toFixed(3)} T
-                          </span>
-                        </div>
-                        <div className="document-info-item">
-                          <span className="document-info-label">Remaining Deal After</span>
-                          <span className="document-info-value">
-                            {(selectedPurchase.remainingApproxQuantity - parseFloat(formData.deductFromDeal)).toFixed(3)} T
-                          </span>
-                        </div>
-                        <div className="document-info-item">
-                          <span className="document-info-label">Gross Amount</span>
-                          <span className="document-info-value">
-                            ₹{(parseFloat(formData.actualWeight) * 1000 * selectedPurchase.ratePerKg).toFixed(2)}
-                          </span>
-                        </div>
-                        <div className="document-info-item">
-                          <span className="document-info-label">Godown Charges</span>
-                          <span className="document-info-value text-warning-bold">
-                            - ₹{(parseFloat(formData.actualWeight) * 1000 * selectedPurchase.godownChargesPerKg).toFixed(2)}
-                          </span>
-                        </div>
-                        <div className="document-info-item">
-                          <span className="document-info-label">Net Payable</span>
-                          <span className="document-info-value text-success-bold" style={{fontSize: '1.25rem'}}>
-                            ₹{((parseFloat(formData.actualWeight) * 1000 * selectedPurchase.ratePerKg) - 
-                               (parseFloat(formData.actualWeight) * 1000 * selectedPurchase.godownChargesPerKg)).toFixed(2)}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                <div className="form-group">
-                  <label className="form-label">Supplier Challan Number</label>
-                  <input
-                    type="text"
-                    className="form-control"
-                    value={formData.supplierChallanNumber}
-                    onChange={(e) => setFormData({...formData, supplierChallanNumber: e.target.value})}
-                    placeholder="Paper challan number from supplier"
+                    className="w-full px-4 py-2.5 border-2 border-gray-300 rounded-lg focus:border-amber-500 focus:ring-4 focus:ring-amber-100 transition-all"
                   />
                 </div>
+              </ResponsiveFormRow>
 
-                <div className="form-group">
-                  <label className="form-label">Notes</label>
-                  <textarea
-                    className="form-control"
-                    value={formData.notes}
-                    onChange={(e) => setFormData({...formData, notes: e.target.value})}
-                    rows="2"
-                  />
-                </div>
-
-                <div className="modal-footer">
-                  <button type="button" className="btn btn-secondary" onClick={resetForm}>
-                    Cancel
-                  </button>
-                  <button type="submit" className="btn btn-primary">
-                    Record Delivery
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {showPaymentModal && selectedDelivery && (
-        <div className="modal-overlay" onClick={() => setShowPaymentModal(false)}>
-          <div className="modal-content" style={{maxWidth: '600px'}} onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h3 className="modal-title">Add Payment</h3>
-              <button className="modal-close" onClick={() => setShowPaymentModal(false)}>×</button>
-            </div>
-            
-            <div className="modal-body">
-              <div className="card card-premium mb-3">
-                <div className="card-body">
-                  <h4 className="card-title">Delivery Summary</h4>
-                  <div className="document-info">
-                    <div className="document-info-item">
-                      <span className="document-info-label">Delivery #</span>
-                      <span className="document-info-value">{selectedDelivery.deliveryNumber}</span>
-                    </div>
-                    <div className="document-info-item">
-                      <span className="document-info-label">Actual Weight</span>
-                      <span className="document-info-value">{selectedDelivery.actualWeight.toFixed(3)} T</span>
-                    </div>
-                    <div className="document-info-item">
-                      <span className="document-info-label">Net Payable</span>
-                      <span className="document-info-value text-success-bold">
-                        ₹{selectedDelivery.netAmount.toFixed(2)}
-                      </span>
-                    </div>
-                    <div className="document-info-item">
-                      <span className="document-info-label">Already Paid</span>
-                      <span className="document-info-value">₹{selectedDelivery.amountPaid.toFixed(2)}</span>
-                    </div>
-                    <div className="document-info-item">
-                      <span className="document-info-label">Pending Amount</span>
-                      <span className="document-info-value text-error" style={{fontSize: '1.25rem'}}>
-                        ₹{selectedDelivery.pendingAmount.toFixed(2)}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {selectedDelivery.payments && selectedDelivery.payments.length > 0 && (
-                <div className="card mb-3">
-                  <div className="card-body">
-                    <h4 className="card-title">Payment History</h4>
-                    <div className="table-container">
-                      <table className="table">
-                        <thead>
-                          <tr>
-                            <th>Date</th>
-                            <th>Method</th>
-                            <th>Details</th>
-                            <th>Amount</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {selectedDelivery.payments.map((payment, index) => (
-                            <tr key={index}>
-                              <td>{new Date(payment.paymentDate).toLocaleDateString()}</td>
-                              <td><span className="badge badge-info">{payment.paymentMethod}</span></td>
-                              <td>
-                                {payment.paymentMethod === 'Cheque' && (
-                                  <div style={{fontSize: '0.85rem'}}>
-                                    <div>Cheque: {payment.chequeNumber}</div>
-                                    <div>Date: {new Date(payment.chequeDate).toLocaleDateString()}</div>
-                                    {payment.bankName && <div>Bank: {payment.bankName}</div>}
-                                  </div>
-                                )}
-                                {payment.paymentMethod === 'RTGS' && (
-                                  <div style={{fontSize: '0.85rem'}}>
-                                    <div>TXN: {payment.transactionId}</div>
-                                  </div>
-                                )}
-                                {payment.notes && <div style={{fontSize: '0.85rem', color: 'var(--text-secondary)'}}>{payment.notes}</div>}
-                              </td>
-                              <td className="text-success-bold">₹{payment.amount.toFixed(2)}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              <form onSubmit={handlePaymentSubmit} className="form-container">
-                <div className="form-row">
-                  <div className="form-group">
-                    <label className="form-label">Payment Date *</label>
-                    <input
-                      type="date"
-                      className="form-control"
-                      value={paymentData.paymentDate}
-                      onChange={(e) => setPaymentData({...paymentData, paymentDate: e.target.value})}
-                      onClick={(e) => e.stopPropagation()}
-                      required
-                    />
-                  </div>
-
-                  <div className="form-group">
-                    <label className="form-label">Amount *</label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      className="form-control"
-                      value={paymentData.amount}
-                      onChange={(e) => setPaymentData({...paymentData, amount: e.target.value})}
-                      onClick={(e) => e.stopPropagation()}
-                      max={selectedDelivery.pendingAmount}
-                      required
-                    />
-                  </div>
-                </div>
-
-                <div className="form-group">
-                  <label className="form-label">Payment Method *</label>
+              <ResponsiveFormRow>
+                <div className="space-y-2">
+                  <label className="block text-sm font-semibold text-gray-700">
+                    Yarn Type *
+                  </label>
                   <select
-                    className="form-control"
-                    value={paymentData.paymentMethod}
-                    onChange={(e) => setPaymentData({...paymentData, paymentMethod: e.target.value})}
+                    value={formData.yarnType}
+                    onChange={(e) => setFormData({...formData, yarnType: e.target.value})}
                     required
+                    className="w-full px-4 py-2.5 border-2 border-gray-300 rounded-lg focus:border-amber-500 focus:ring-4 focus:ring-amber-100 bg-white cursor-pointer transition-all"
                   >
-                    <option value="RTGS">RTGS/NEFT/UPI</option>
-                    <option value="Cheque">Cheque</option>
+                    <option value="Roto">Roto</option>
+                    <option value="Zeero">Zeero</option>
+                    <option value="Other">Other</option>
                   </select>
                 </div>
 
-                {paymentData.paymentMethod === 'RTGS' && (
-                  <div className="form-group">
-                    <label className="form-label">Transaction ID *</label>
-                    <input
-                      type="text"
-                      className="form-control"
-                      value={paymentData.transactionId}
-                      onChange={(e) => setPaymentData({...paymentData, transactionId: e.target.value})}
-                      onClick={(e) => e.stopPropagation()}
-                      placeholder="e.g., RTGS123456789"
-                      required
-                    />
-                  </div>
-                )}
-
-                {paymentData.paymentMethod === 'Cheque' && (
-                  <>
-                    <div className="form-row">
-                      <div className="form-group">
-                        <label className="form-label">Cheque Number *</label>
-                        <input
-                          type="text"
-                          className="form-control"
-                          value={paymentData.chequeNumber}
-                          onChange={(e) => setPaymentData({...paymentData, chequeNumber: e.target.value})}
-                          onClick={(e) => e.stopPropagation()}
-                          placeholder="e.g., 123456"
-                          required
-                        />
-                      </div>
-
-                      <div className="form-group">
-                        <label className="form-label">Cheque Date *</label>
-                        <input
-                          type="date"
-                          className="form-control"
-                          value={paymentData.chequeDate}
-                          onChange={(e) => setPaymentData({...paymentData, chequeDate: e.target.value})}
-                          onClick={(e) => e.stopPropagation()}
-                          required
-                        />
-                      </div>
-                    </div>
-
-                    <div className="form-group">
-                      <label className="form-label">Bank Name</label>
-                      <input
-                        type="text"
-                        className="form-control"
-                        value={paymentData.bankName}
-                        onChange={(e) => setPaymentData({...paymentData, bankName: e.target.value})}
-                        onClick={(e) => e.stopPropagation()}
-                        placeholder="e.g., HDFC Bank"
-                      />
-                    </div>
-                  </>
-                )}
-
-                <div className="form-group">
-                  <label className="form-label">Notes</label>
-                  <textarea
-                    className="form-control"
-                    value={paymentData.notes}
-                    onChange={(e) => setPaymentData({...paymentData, notes: e.target.value})}
-                    onClick={(e) => e.stopPropagation()}
-                    rows="2"
-                    placeholder="Any additional notes"
+                <div className="space-y-2">
+                  <label className="block text-sm font-semibold text-gray-700">
+                    Yarn Quality *
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.yarnQuality}
+                    onChange={(e) => setFormData({...formData, yarnQuality: e.target.value})}
+                    placeholder="e.g., 20s, 30s, 40s"
+                    required
+                    className="w-full px-4 py-2.5 border-2 border-gray-300 rounded-lg focus:border-amber-500 focus:ring-4 focus:ring-amber-100 transition-all"
                   />
                 </div>
+              </ResponsiveFormRow>
 
-                <div className="modal-footer">
-                  <button type="button" className="btn btn-secondary" onClick={() => setShowPaymentModal(false)}>
-                    Cancel
-                  </button>
-                  <button type="submit" className="btn btn-success">
-                    Add Payment
-                  </button>
+              <ResponsiveFormRow>
+                <div className="space-y-2">
+                  <label className="block text-sm font-semibold text-gray-700">
+                    Approx. Quantity (Tons) *
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={formData.approxQuantity}
+                    onChange={(e) => setFormData({...formData, approxQuantity: e.target.value})}
+                    placeholder="e.g., 10"
+                    required
+                    className="w-full px-4 py-2.5 border-2 border-gray-300 rounded-lg focus:border-amber-500 focus:ring-4 focus:ring-amber-100 transition-all"
+                  />
+                  <p className="text-sm text-gray-600">
+                    Deal quantity (actual weight may vary)
+                  </p>
                 </div>
-              </form>
-            </div>
+
+                <div className="space-y-2">
+                  <label className="block text-sm font-semibold text-gray-700">
+                    Rate per Kg *
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={formData.ratePerKg}
+                    onChange={(e) => setFormData({...formData, ratePerKg: e.target.value})}
+                    placeholder="e.g., 112"
+                    required
+                    className="w-full px-4 py-2.5 border-2 border-gray-300 rounded-lg focus:border-amber-500 focus:ring-4 focus:ring-amber-100 transition-all"
+                  />
+                </div>
+              </ResponsiveFormRow>
+
+              <ResponsiveFormRow>
+                <div className="space-y-2">
+                  <label className="block text-sm font-semibold text-gray-700">
+                    Godown Charges per Kg
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={formData.godownChargesPerKg}
+                    onChange={(e) => setFormData({...formData, godownChargesPerKg: e.target.value})}
+                    placeholder="e.g., 1.65"
+                    className="w-full px-4 py-2.5 border-2 border-gray-300 rounded-lg focus:border-amber-500 focus:ring-4 focus:ring-amber-100 transition-all"
+                  />
+                  <p className="text-sm text-gray-600">
+                    Amount to deduct from payment
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="block text-sm font-semibold text-gray-700">
+                    Payment Type *
+                  </label>
+                  <select
+                    value={formData.paymentType}
+                    onChange={(e) => setFormData({...formData, paymentType: e.target.value})}
+                    required
+                    className="w-full px-4 py-2.5 border-2 border-gray-300 rounded-lg focus:border-amber-500 focus:ring-4 focus:ring-amber-100 bg-white cursor-pointer transition-all"
+                  >
+                    <option value="Current">Current Payment</option>
+                    <option value="Dhara">Dhara (Borrow)</option>
+                  </select>
+                </div>
+              </ResponsiveFormRow>
+
+              <div className="space-y-2">
+                <label className="block text-sm font-semibold text-gray-700">
+                  Payment Days *
+                </label>
+                <input
+                  type="number"
+                  value={formData.paymentDays}
+                  onChange={(e) => setFormData({...formData, paymentDays: e.target.value})}
+                  placeholder="e.g., 4, 5, 30, 40"
+                  required
+                  className="w-full px-4 py-2.5 border-2 border-gray-300 rounded-lg focus:border-amber-500 focus:ring-4 focus:ring-amber-100 transition-all"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="block text-sm font-semibold text-gray-700">
+                  Notes
+                </label>
+                <textarea
+                  value={formData.notes}
+                  onChange={(e) => setFormData({...formData, notes: e.target.value})}
+                  rows="2"
+                  className="w-full px-4 py-2.5 border-2 border-gray-300 rounded-lg focus:border-amber-500 focus:ring-4 focus:ring-amber-100 resize-vertical transition-all"
+                />
+              </div>
+
+              <div className="flex flex-col md:flex-row justify-end gap-3 pt-4 border-t-2 border-amber-200">
+                <button 
+                  type="button" 
+                  onClick={resetForm}
+                  className="inline-flex items-center justify-center gap-2 px-6 py-2.5 font-semibold rounded-lg bg-white border-2 border-gray-300 text-gray-700 hover:border-amber-500 hover:bg-amber-50 transition-all w-full md:w-auto"
+                >
+                  Cancel
+                </button>
+                <button 
+                  type="submit"
+                  className="inline-flex items-center justify-center gap-2 px-6 py-2.5 font-semibold rounded-lg bg-gradient-to-r from-amber-500 to-orange-600 text-white hover:from-amber-600 hover:to-orange-700 transition-all shadow-sm hover:shadow-md w-full md:w-auto"
+                >
+                  {editingPurchase ? 'Update' : 'Create'} Purchase
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
 
-      <div className="card">
-        <div className="card-header">
-          <span className="card-title">All Deliveries</span>
-          <div className="flex items-center gap-2">
-            <label className="form-label" style={{marginBottom: 0}}>Filter:</label>
-            <select 
-              className="form-control"
-              style={{width: 'auto', minWidth: '150px'}}
-              value={filterStatus} 
-              onChange={(e) => setFilterStatus(e.target.value)}
-            >
-              <option value="all">All Status</option>
-              <option value="pending">Pending Payment</option>
-              <option value="partial">Partial Payment</option>
-              <option value="paid">Paid</option>
-            </select>
-          </div>
-        </div>
-
-        <div className="table-container">
-          <table className="table">
-            <thead>
-              <tr>
-                <th>Del #</th>
-                <th>PO #</th>
-                <th>Party</th>
-                <th>Yarn</th>
-                <th>Date</th>
-                <th>Actual Weight</th>
-                <th>Deducted</th>
-                <th>Gross</th>
-                <th>Godown</th>
-                <th>Net Payable</th>
-                <th>Paid</th>
-                <th>Pending</th>
-                <th>Due Date</th>
-                <th>Status</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredDeliveries.length === 0 ? (
-                <tr>
-                  <td colSpan="15" className="text-center">
-                    <div className="empty-state">
-                      <div className="empty-state-icon">📦</div>
-                      <div className="empty-state-title">No Deliveries Found</div>
-                      <div className="empty-state-description">
-                        Record your first delivery to get started
-                      </div>
-                    </div>
-                  </td>
-                </tr>
-              ) : (
-                filteredDeliveries.map(delivery => {
-                  const actualWeight = delivery.actualWeight || 0;
-                  const deductFromDeal = delivery.deductFromDeal || actualWeight;
-                  const grossAmount = delivery.grossAmount || 0;
-                  const godownCharges = delivery.godownCharges || 0;
-                  const netAmount = delivery.netAmount || 0;
-                  const amountPaid = delivery.amountPaid || 0;
-                  const pendingAmount = delivery.pendingAmount !== undefined 
-                    ? delivery.pendingAmount 
-                    : (netAmount - amountPaid);
-                  
-                  return (
-                    <tr key={delivery._id}>
-                      <td><strong>#{delivery.deliveryNumber}</strong></td>
-                      <td>PO#{delivery.purchase.purchaseNumber}</td>
-                      <td>{delivery.purchase.partyName}</td>
-                      <td>{delivery.purchase.yarnType} {delivery.purchase.yarnQuality}</td>
-                      <td>{new Date(delivery.deliveryDate).toLocaleDateString()}</td>
-                      <td className="text-success-bold"><strong>{actualWeight.toFixed(3)} T</strong></td>
-                      <td className="text-warning-bold">{deductFromDeal.toFixed(3)} T</td>
-                      <td>₹{grossAmount.toFixed(2)}</td>
-                      <td className="text-warning-bold">₹{godownCharges.toFixed(2)}</td>
-                      <td className="text-success-bold"><strong>₹{netAmount.toFixed(2)}</strong></td>
-                      <td>₹{amountPaid.toFixed(2)}</td>
-                      <td className="text-error"><strong>₹{pendingAmount.toFixed(2)}</strong></td>
-                      <td>{new Date(delivery.paymentDueDate).toLocaleDateString()}</td>
-                      <td>
-                        <span className={`badge ${getPaymentStatusBadge(delivery.paymentStatus)}`}>
-                          {delivery.paymentStatus}
-                        </span>
-                      </td>
-                      <td>
-                        <div className="flex gap-1">
-                          <button 
-                            className="btn btn-sm btn-success" 
-                            onClick={() => openPaymentModal(delivery)}
-                          >
-                            Payment
-                          </button>
-                          <button 
-                            className="btn btn-sm btn-danger" 
-                            onClick={() => handleDelete(delivery._id)}
-                          >
-                            Delete
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })
+      {/* Filter Buttons */}
+      <div className="bg-white rounded-xl shadow-sm border-2 border-amber-200 p-6">
+        <h3 className="text-lg font-bold text-gray-900 mb-4">Filter Purchases</h3>
+        <div className="flex flex-col md:flex-row gap-3">
+          {[
+            { key: 'all', label: 'All', icon: ShoppingCart },
+            { key: 'pending', label: 'Pending', icon: AlertCircle },
+            { key: 'partial', label: 'Partial', icon: TrendingUp },
+            { key: 'completed', label: 'Completed', icon: TrendingUp }
+          ].map(({ key, label, icon: Icon }) => (
+            <button
+              key={key}
+              onClick={() => setFilterStatus(key)}
+              className={cn(
+                "inline-flex items-center justify-center gap-2 px-6 py-2.5 font-semibold rounded-lg transition-all",
+                filterStatus === key
+                  ? "bg-gradient-to-r from-amber-500 to-orange-600 text-white shadow-md"
+                  : "bg-white border-2 border-gray-300 text-gray-700 hover:border-amber-500 hover:bg-amber-50"
               )}
-            </tbody>
-          </table>
+            >
+              <Icon className="w-4 h-4" />
+              {label} ({statusCounts[key]})
+            </button>
+          ))}
         </div>
       </div>
+
+      {/* Purchases Table */}
+      {filteredPurchases.length === 0 ? (
+        <div className="bg-white rounded-xl shadow-sm border-2 border-dashed border-gray-300 p-12 text-center">
+          <ShoppingCart className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+          <h3 className="text-xl font-bold text-gray-900 mb-2">No Purchases Found</h3>
+          <p className="text-gray-600 mb-4">Create your first purchase order to get started.</p>
+          <button
+            onClick={() => setShowForm(true)}
+            className="inline-flex items-center justify-center gap-2 px-6 py-2.5 font-semibold rounded-lg bg-gradient-to-r from-amber-500 to-orange-600 text-white hover:from-amber-600 hover:to-orange-700 transition-all shadow-sm hover:shadow-md"
+          >
+            <Plus className="w-5 h-5" />
+            Create First Purchase
+          </button>
+        </div>
+      ) : (
+        <ResponsiveTable
+          columns={columns}
+          data={filteredPurchases}
+          className="hover:bg-amber-50"
+        />
+      )}
     </div>
   );
 };
 
-export default PurchaseDeliveries;
+export default PurchaseManagement;

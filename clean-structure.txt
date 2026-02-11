@@ -1,3 +1,4 @@
+├── .gitattributes
 ├── .gitignore
 ├── backend
   ├── gstScraper.js
@@ -34,24 +35,27 @@
   ├── .env.production
   ├── .gitignore
   ├── package.json
+  ├── postcss.config.js
   ├── README.md
   ├── src
     ├── App.css
     ├── App.js
-    ├── App.test.js
     ├── components
       ├── AppUI.css
       ├── AppUI.js
       ├── ProtectedRoute.js
+      ├── ResponsiveForm.js
+      ├── ResponsiveTable.js
     ├── context
       ├── AuthContext.js
       ├── ThemeContext.js
     ├── index.css
     ├── index.js
+    ├── lib
+      ├── utils.js
     ├── logo.svg
     ├── pages
       ├── AddBales.js
-      ├── CompanySettings.css
       ├── CompanySettings.js
       ├── Dashboard.js
       ├── DealManagement.js
@@ -73,5 +77,8 @@
     ├── setupTests.js
     ├── utils
       ├── formatters.js
+  ├── tailwind.config.js
 ├── generateTree.js
+├── jsconfig.json
+├── package.json
 ├── prompt

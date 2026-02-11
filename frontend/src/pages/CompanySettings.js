@@ -1,129 +1,58 @@
-//frontend/src/pages/CompanySettings.js
+// frontend/src/pages/CompanySettings.js
 import React, { useState, useEffect } from 'react';
 import { companySettingsAPI } from '../services/api';
+import { 
+  Save, Building2, CreditCard, Hash, FileText, ClipboardList, ScrollText, 
+  Settings as SettingsIcon, Upload, X, Shield, RefreshCw, CheckCircle, 
+  AlertCircle, Printer, ChevronRight, Menu
+} from 'lucide-react';
 
 function CompanySettings() {
   const [activeTab, setActiveTab] = useState('company');
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [formData, setFormData] = useState({
-    // Company Details
-    companyName: '',
-    address: '',
-    city: '',
-    state: '',
-    stateCode: '',
-    mobile: '',
-    email: '',
-    gstNumber: '',
-    logo: '',
-    
-    // Bank Details
-    bankName: '',
-    accountNumber: '',
-    ifscCode: '',
-    branchName: '',
-    
-    // Ganth Press
-    ganthPressName: '',
-    ganthPressAddress: '',
-    
-    // Number Series
+    companyName: '', address: '', city: '', state: '', stateCode: '',
+    mobile: '', email: '', gstNumber: '', logo: '',
+    bankName: '', accountNumber: '', ifscCode: '', branchName: '',
+    ganthPressName: '', ganthPressAddress: '',
     numberSeries: {
-      invoicePrefix: 'INV',
-      invoiceStartNumber: 1,
-      invoiceCurrentNumber: 0,
-      invoiceResetYearly: true,
-      invoiceYearFormat: 'YY',
-      challanPrefix: 'DC',
-      challanStartNumber: 1,
-      challanCurrentNumber: 0,
-      challanResetYearly: true,
-      challanYearFormat: 'YY',
-      purchasePrefix: 'PO',
-      purchaseStartNumber: 1,
-      purchaseCurrentNumber: 0,
-      purchaseResetYearly: true,
-      purchaseYearFormat: 'YY'
+      invoicePrefix: 'INV', invoiceStartNumber: 1, invoiceCurrentNumber: 0,
+      invoiceResetYearly: true, invoiceYearFormat: 'YY',
+      challanPrefix: 'DC', challanStartNumber: 1, challanCurrentNumber: 0,
+      challanResetYearly: true, challanYearFormat: 'YY',
+      purchasePrefix: 'PO', purchaseStartNumber: 1, purchaseCurrentNumber: 0,
+      purchaseResetYearly: true, purchaseYearFormat: 'YY'
     },
-    
-    // Invoice Format
     invoiceFormat: {
-      template: 'classic',
-      showLogo: true,
-      logoPosition: 'left',
-      primaryColor: '#2c3e50',
-      accentColor: '#3498db',
-      showBankDetails: true,
-      showTerms: true,
-      showSignature: true,
-      showQRCode: false,
-      footerText: 'Thank you for your business!',
-      taxDisplayStyle: 'combined',
-      // Initialized new fields
-      colorMode: 'color',
-      fontFamily: 'Segoe UI',
-      fontWeight: 'normal',
-      fontSize: {
-        base: 11,
-        companyName: 48,
-        heading: 12
-      }
+      template: 'classic', showLogo: true, logoPosition: 'left',
+      primaryColor: '#2c3e50', accentColor: '#3498db',
+      showBankDetails: true, showTerms: true, showSignature: true,
+      showQRCode: false, footerText: 'Thank you for your business!',
+      taxDisplayStyle: 'combined', colorMode: 'color',
+      fontFamily: 'Segoe UI', fontWeight: 'normal',
+      fontSize: { base: 11, companyName: 48, heading: 12 }
     },
-    
-    // Challan Format
     challanFormat: {
-      template: 'detailed',
-      showLogo: true,
-      showGanthPress: true,
-      showBaleDetails: true,
-      showQualityBreakdown: true,
-      showWeights: true,
+      template: 'detailed', showLogo: true, showGanthPress: true,
+      showBaleDetails: true, showQualityBreakdown: true, showWeights: true,
       footerNote: 'Goods remain the property of the consignor until paid for',
-      // Initialized new fields
-      logoPosition: 'left',
-      colorMode: 'color',
-      fontFamily: 'Segoe UI',
-      fontWeight: 'normal',
-      fontSize: {
-        base: 11,
-        companyName: 22,
-        heading: 12
-      }
+      logoPosition: 'left', colorMode: 'color', fontFamily: 'Segoe UI',
+      fontWeight: 'normal', fontSize: { base: 11, companyName: 22, heading: 12 }
     },
-    
-    // Terms
     terms: {
-      invoice: {
-        line1: '',
-        line2: '',
-        line3: '',
-        line4: ''
-      },
-      challan: {
-        line1: '',
-        line2: '',
-        line3: ''
-      }
+      invoice: { line1: '', line2: '', line3: '', line4: '' },
+      challan: { line1: '', line2: '', line3: '' }
     },
-    
-    // Signature & Stamps
-    signatureImage: '',
-    signatureText: 'Authorized Signatory',
-    stampImage: '',
-    
-    // Preferences
+    signatureImage: '', signatureText: 'Authorized Signatory', stampImage: '',
     preferences: {
-      defaultTaxRate: 18,
-      defaultCurrency: 'INR',
-      dateFormat: 'DD/MM/YYYY',
-      numberFormat: 'indian'
+      defaultTaxRate: 18, defaultCurrency: 'INR',
+      dateFormat: 'DD/MM/YYYY', numberFormat: 'indian'
     }
   });
   
   const [message, setMessage] = useState({ type: '', text: '' });
   const [loading, setLoading] = useState(true);
   const [exists, setExists] = useState(false);
-  
-  // CAPTCHA states
   const [showCaptchaModal, setShowCaptchaModal] = useState(false);
   const [captchaImage, setCaptchaImage] = useState('');
   const [captchaInput, setCaptchaInput] = useState('');
@@ -132,36 +61,23 @@ function CompanySettings() {
   const [captchaLoading, setCaptchaLoading] = useState(false);
   const [verifyingGST, setVerifyingGST] = useState(false);
 
-  useEffect(() => {
-    fetchSettings();
-  }, []);
+  useEffect(() => { fetchSettings(); }, []);
 
   const fetchSettings = async () => {
     try {
       const response = await companySettingsAPI.get();
-      
       if (response.data.exists && response.data.data) {
         const data = response.data.data;
-        // Deep merge to preserve defaults
         setFormData(prevData => ({
-          ...prevData,
-          ...data,
+          ...prevData, ...data,
           numberSeries: data.numberSeries || prevData.numberSeries,
           invoiceFormat: {
-            ...prevData.invoiceFormat,
-            ...(data.invoiceFormat || {}),
-            fontSize: {
-              ...prevData.invoiceFormat.fontSize,
-              ...(data.invoiceFormat?.fontSize || {})
-            }
+            ...prevData.invoiceFormat, ...(data.invoiceFormat || {}),
+            fontSize: { ...prevData.invoiceFormat.fontSize, ...(data.invoiceFormat?.fontSize || {}) }
           },
           challanFormat: {
-            ...prevData.challanFormat,
-            ...(data.challanFormat || {}),
-            fontSize: {
-              ...prevData.challanFormat.fontSize,
-              ...(data.challanFormat?.fontSize || {})
-            }
+            ...prevData.challanFormat, ...(data.challanFormat || {}),
+            fontSize: { ...prevData.challanFormat.fontSize, ...(data.challanFormat?.fontSize || {}) }
           },
           terms: data.terms || prevData.terms,
           preferences: data.preferences || prevData.preferences
@@ -177,8 +93,7 @@ function CompanySettings() {
   };
 
   const handleGSTNumberChange = (e) => {
-    const gstValue = e.target.value.toUpperCase();
-    setFormData({ ...formData, gstNumber: gstValue });
+    setFormData({ ...formData, gstNumber: e.target.value.toUpperCase() });
   };
 
   const triggerGSTVerification = async () => {
@@ -187,14 +102,12 @@ function CompanySettings() {
       setTimeout(() => setMessage({ type: '', text: '' }), 3000);
       return;
     }
-
     const gstPattern = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/;
     if (!gstPattern.test(formData.gstNumber)) {
       setMessage({ type: 'error', text: 'Invalid GST number format!' });
       setTimeout(() => setMessage({ type: '', text: '' }), 3000);
       return;
     }
-
     setPendingGSTNumber(formData.gstNumber);
     await initializeCaptcha();
   };
@@ -203,10 +116,8 @@ function CompanySettings() {
     setCaptchaLoading(true);
     setShowCaptchaModal(true);
     setCaptchaInput('');
-    
     try {
       const response = await companySettingsAPI.initCaptcha();
-      
       if (response.data.success) {
         setCaptchaImage(response.data.captchaImage);
         setSessionId(response.data.sessionId);
@@ -229,29 +140,19 @@ function CompanySettings() {
       setMessage({ type: 'error', text: 'Please enter the CAPTCHA' });
       return;
     }
-
     setVerifyingGST(true);
-    
     try {
       const response = await companySettingsAPI.verifyGST({
-        sessionId: sessionId,
-        gstNumber: pendingGSTNumber,
-        captcha: captchaInput
+        sessionId, gstNumber: pendingGSTNumber, captcha: captchaInput
       });
-
       if (response.data.success) {
         const gstData = response.data.data;
-        
         setFormData({
-          ...formData,
-          gstNumber: pendingGSTNumber,
-          companyName: gstData.name || '',
-          address: gstData.address || '',
-          city: gstData.city || '',
-          state: gstData.state || '',
+          ...formData, gstNumber: pendingGSTNumber,
+          companyName: gstData.name || '', address: gstData.address || '',
+          city: gstData.city || '', state: gstData.state || '',
           stateCode: gstData.stateCode || '',
         });
-        
         setMessage({ type: 'success', text: `✓ GST verified! Company: ${gstData.name}` });
         setShowCaptchaModal(false);
         setCaptchaInput('');
@@ -261,7 +162,6 @@ function CompanySettings() {
         setFormData({ ...formData, gstNumber: pendingGSTNumber, stateCode });
         setShowCaptchaModal(false);
       }
-      
       setTimeout(() => setMessage({ type: '', text: '' }), 5000);
     } catch (error) {
       console.error('Error verifying GST:', error);
@@ -272,11 +172,6 @@ function CompanySettings() {
     }
   };
 
-  const closeCaptchaModal = () => {
-    setShowCaptchaModal(false);
-    setCaptchaInput('');
-  };
-
   const handleImageUpload = (field) => (e) => {
     const file = e.target.files[0];
     if (file) {
@@ -285,31 +180,21 @@ function CompanySettings() {
         setTimeout(() => setMessage({ type: '', text: '' }), 3000);
         return;
       }
-
       if (!file.type.startsWith('image/')) {
         setMessage({ type: 'error', text: 'Please upload an image file' });
         setTimeout(() => setMessage({ type: '', text: '' }), 3000);
         return;
       }
-
       const reader = new FileReader();
-      reader.onloadend = () => {
-        setFormData({ ...formData, [field]: reader.result });
-      };
+      reader.onloadend = () => setFormData({ ...formData, [field]: reader.result });
       reader.readAsDataURL(file);
     }
   };
 
-  const removeImage = (field) => () => {
-    setFormData({ ...formData, [field]: '' });
-  };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
     try {
       const response = await companySettingsAPI.createOrUpdate(formData);
-      
       if (response.data.success) {
         setMessage({ type: 'success', text: '✓ Settings saved successfully!' });
         setExists(true);
@@ -317,7 +202,6 @@ function CompanySettings() {
       } else {
         setMessage({ type: 'error', text: 'Error saving settings!' });
       }
-      
       setTimeout(() => setMessage({ type: '', text: '' }), 3000);
     } catch (error) {
       console.error('Error saving settings:', error);
@@ -335,10 +219,7 @@ function CompanySettings() {
     const { value, type, checked } = e.target;
     setFormData({
       ...formData,
-      [parent]: {
-        ...formData[parent],
-        [field]: type === 'checkbox' ? checked : value
-      }
+      [parent]: { ...formData[parent], [field]: type === 'checkbox' ? checked : value }
     });
   };
 
@@ -347,10 +228,7 @@ function CompanySettings() {
       ...formData,
       terms: {
         ...formData.terms,
-        [section]: {
-          ...formData.terms[section],
-          [line]: e.target.value
-        }
+        [section]: { ...formData.terms[section], [line]: e.target.value }
       }
     });
   };
@@ -361,10 +239,7 @@ function CompanySettings() {
       ...formData,
       invoiceFormat: {
         ...formData.invoiceFormat,
-        fontSize: {
-          ...formData.invoiceFormat.fontSize,
-          [field]: value
-        }
+        fontSize: { ...formData.invoiceFormat.fontSize, [field]: value }
       }
     });
   };
@@ -375,1260 +250,768 @@ function CompanySettings() {
       ...formData,
       challanFormat: {
         ...formData.challanFormat,
-        fontSize: {
-          ...formData.challanFormat.fontSize,
-          [field]: value
-        }
+        fontSize: { ...formData.challanFormat.fontSize, [field]: value }
       }
     });
   };
 
-  // Generate number preview
   const generateNumberPreview = (type) => {
     const series = formData.numberSeries;
     const year = new Date().getFullYear();
-    let prefix = '';
-    let yearPart = '';
-    let number = '';
+    let prefix = '', yearPart = '', number = '';
     
-    switch(type) {
-      case 'invoice':
-        prefix = series.invoicePrefix;
-        number = (series.invoiceCurrentNumber + 1).toString().padStart(4, '0');
-        switch(series.invoiceYearFormat) {
-          case 'YYYY': yearPart = `${year}`; break;
-          case 'YY': yearPart = `${year.toString().slice(-2)}`; break;
-          case 'YYYY-YY': yearPart = `${year}-${(year + 1).toString().slice(-2)}`; break;
-          default: yearPart = '';
-        }
-        break;
-      case 'challan':
-        prefix = series.challanPrefix;
-        number = (series.challanCurrentNumber + 1).toString().padStart(4, '0');
-        switch(series.challanYearFormat) {
-          case 'YYYY': yearPart = `${year}`; break;
-          case 'YY': yearPart = `${year.toString().slice(-2)}`; break;
-          case 'YYYY-YY': yearPart = `${year}-${(year + 1).toString().slice(-2)}`; break;
-          default: yearPart = '';
-        }
-        break;
-      case 'purchase':
-        prefix = series.purchasePrefix;
-        number = (series.purchaseCurrentNumber + 1).toString().padStart(4, '0');
-        switch(series.purchaseYearFormat) {
-          case 'YYYY': yearPart = `${year}`; break;
-          case 'YY': yearPart = `${year.toString().slice(-2)}`; break;
-          case 'YYYY-YY': yearPart = `${year}-${(year + 1).toString().slice(-2)}`; break;
-          default: yearPart = '';
-        }
-        break;
+    const config = {
+      invoice: { prefix: series.invoicePrefix, current: series.invoiceCurrentNumber, format: series.invoiceYearFormat },
+      challan: { prefix: series.challanPrefix, current: series.challanCurrentNumber, format: series.challanYearFormat },
+      purchase: { prefix: series.purchasePrefix, current: series.purchaseCurrentNumber, format: series.purchaseYearFormat }
+    }[type];
+
+    prefix = config.prefix;
+    number = (config.current + 1).toString().padStart(4, '0');
+    switch(config.format) {
+      case 'YYYY': yearPart = `${year}`; break;
+      case 'YY': yearPart = `${year.toString().slice(-2)}`; break;
+      case 'YYYY-YY': yearPart = `${year}-${(year + 1).toString().slice(-2)}`; break;
+      default: yearPart = '';
     }
-    
     return `${prefix}${yearPart ? '-' + yearPart : ''}-${number}`;
   };
 
+  const tabs = [
+    { id: 'company', label: 'Company Details', icon: Building2, description: 'Basic company information' },
+    { id: 'bank', label: 'Bank & Press', icon: CreditCard, description: 'Banking and press details' },
+    { id: 'numbering', label: 'Number Series', icon: Hash, description: 'Document numbering' },
+    { id: 'invoice', label: 'Invoice Format', icon: FileText, description: 'Invoice layout settings' },
+    { id: 'challan', label: 'Challan Format', icon: ClipboardList, description: 'Challan layout settings' },
+    { id: 'terms', label: 'Terms & Conditions', icon: ScrollText, description: 'Legal terms' },
+    { id: 'preferences', label: 'Preferences', icon: SettingsIcon, description: 'General preferences' }
+  ];
+
   if (loading) {
     return (
-      <div className="page-container">
-        <div className="loading"><div className="spinner"></div></div>
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-amber-50 to-orange-50">
+        <div className="text-center space-y-4">
+          <div className="w-16 h-16 border-4 border-amber-200 border-t-amber-600 rounded-full animate-spin mx-auto"></div>
+          <p className="text-gray-600 font-medium">Loading settings...</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="page-container">
-      <div className="page-header">
-        <h1 className="page-title">Company Settings</h1>
-        <p className="page-subtitle">Manage your company profile, branding, and document preferences</p>
-      </div>
-
-      {message.text && (
-        <div className={`alert alert-${message.type}`}>
-          {message.text}
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-amber-50">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
+        {/* Header */}
+        <div className="mb-6">
+          <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold bg-gradient-to-r from-amber-700 to-orange-600 bg-clip-text text-transparent mb-2">
+            Company Settings
+          </h1>
+          <p className="text-sm sm:text-base text-gray-600 font-medium">
+            Manage your company profile, branding, and document preferences
+          </p>
         </div>
-      )}
 
-      {/* CAPTCHA Modal */}
-      {showCaptchaModal && (
-        <div className="modal-overlay" onClick={closeCaptchaModal}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h2 className="modal-title">GST Verification</h2>
-              <button className="modal-close" onClick={closeCaptchaModal}>×</button>
-            </div>
-            
-            <div className="modal-body">
-              <p style={{ marginBottom: '1rem', color: '#666' }}>
-                Enter the CAPTCHA to verify: <strong>{pendingGSTNumber}</strong>
-              </p>
-              
-              {captchaLoading ? (
-                <div className="loading" style={{ padding: '2rem' }}>
-                  <div className="spinner"></div>
-                  <p>Loading CAPTCHA...</p>
-                </div>
-              ) : (
-                <>
-                  <div style={{ textAlign: 'center', marginBottom: '1rem' }}>
-                    <img 
-                      src={captchaImage} 
-                      alt="CAPTCHA" 
-                      style={{ 
-                        maxWidth: '100%', 
-                        border: '2px solid #ddd', 
-                        borderRadius: '4px',
-                        cursor: 'pointer'
-                      }}
-                      onClick={initializeCaptcha}
-                    />
-                    <p style={{ fontSize: '0.875rem', color: '#666', marginTop: '0.5rem' }}>
-                      Click image to refresh
-                    </p>
-                  </div>
-                  
-                  <div className="form-group">
-                    <label className="form-label">Enter CAPTCHA *</label>
-                    <input
-                      type="text"
-                      className="form-control"
-                      value={captchaInput}
-                      onChange={(e) => setCaptchaInput(e.target.value)}
-                      placeholder="Enter the text shown above"
-                      autoFocus
-                      onKeyPress={(e) => {
-                        if (e.key === 'Enter') verifyGSTWithCaptcha();
-                      }}
-                    />
-                  </div>
-                  
-                  <div style={{ display: 'flex', gap: '1rem', marginTop: '1.5rem' }}>
-                    <button 
-                      className="btn btn-primary" 
-                      onClick={verifyGSTWithCaptcha}
-                      disabled={verifyingGST}
-                      style={{ flex: 1 }}
-                    >
-                      {verifyingGST ? 'Verifying...' : 'Verify GST'}
-                    </button>
-                    <button 
-                      className="btn btn-secondary" 
-                      onClick={closeCaptchaModal}
-                      disabled={verifyingGST}
-                      style={{ flex: 1 }}
-                    >
-                      Skip
-                    </button>
-                  </div>
-                </>
-              )}
-            </div>
+        {/* Alert Messages */}
+        {message.text && (
+          <div className={`mb-6 p-4 rounded-lg border-l-4 flex items-start gap-3 ${
+            message.type === 'success' 
+              ? 'bg-gradient-to-r from-green-50 to-emerald-50 border-green-500 text-green-800'
+              : message.type === 'info'
+              ? 'bg-gradient-to-r from-cyan-50 to-blue-50 border-cyan-500 text-cyan-800'
+              : 'bg-gradient-to-r from-red-50 to-rose-50 border-red-500 text-red-800'
+          }`}>
+            {message.type === 'success' ? <CheckCircle className="w-5 h-5 flex-shrink-0 mt-0.5" /> : <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />}
+            <span className="text-sm sm:text-base">{message.text}</span>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Tabs Navigation */}
-      <div className="tabs">
-        <button 
-          className={`tab ${activeTab === 'company' ? 'active' : ''}`}
-          onClick={() => setActiveTab('company')}
-        >
-          🏢 Company Details
-        </button>
-        <button 
-          className={`tab ${activeTab === 'bank' ? 'active' : ''}`}
-          onClick={() => setActiveTab('bank')}
-        >
-          🏦 Bank & Press
-        </button>
-        <button 
-          className={`tab ${activeTab === 'numbering' ? 'active' : ''}`}
-          onClick={() => setActiveTab('numbering')}
-        >
-          🔢 Number Series
-        </button>
-        <button 
-          className={`tab ${activeTab === 'invoice' ? 'active' : ''}`}
-          onClick={() => setActiveTab('invoice')}
-        >
-          📄 Invoice Format
-        </button>
-        <button 
-          className={`tab ${activeTab === 'challan' ? 'active' : ''}`}
-          onClick={() => setActiveTab('challan')}
-        >
-          📋 Challan Format
-        </button>
-        <button 
-          className={`tab ${activeTab === 'terms' ? 'active' : ''}`}
-          onClick={() => setActiveTab('terms')}
-        >
-          📝 Terms & Conditions
-        </button>
-        <button 
-          className={`tab ${activeTab === 'preferences' ? 'active' : ''}`}
-          onClick={() => setActiveTab('preferences')}
-        >
-          ⚙️ Preferences
-        </button>
-      </div>
-
-      <form onSubmit={handleSubmit}>
-        
-        {/* Tab: Company Details */}
-        {activeTab === 'company' && (
-          <div className="tab-content">
-            {/* Company Logo */}
-            <div className="card">
-              <div className="card-header">Company Logo</div>
-              
-              <div style={{ textAlign: 'center' }}>
-                {formData.logo ? (
-                  <div>
-                    <img 
-                      src={formData.logo} 
-                      alt="Company Logo" 
-                      className="company-logo"
-                      style={{ margin: '0 auto 1rem auto', display: 'block' }}
-                    />
-                    <div>
-                      <button
-                        type="button"
-                        onClick={removeImage('logo')}
-                        className="btn btn-danger btn-small"
-                      >
-                        Remove Logo
-                      </button>
-                    </div>
+        {/* CAPTCHA Modal */}
+        {showCaptchaModal && (
+          <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={() => setShowCaptchaModal(false)}>
+            <div className="bg-gradient-to-br from-white to-amber-50 rounded-2xl shadow-2xl max-w-md w-full border-2 border-amber-200 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+              <div className="sticky top-0 px-6 py-4 border-b-2 border-amber-200 bg-gradient-to-r from-amber-100 to-orange-100 rounded-t-2xl flex justify-between items-center">
+                <div className="flex items-center gap-2">
+                  <Shield className="w-5 h-5 text-amber-700" />
+                  <h3 className="text-lg sm:text-xl font-bold text-gray-900">GST Verification</h3>
+                </div>
+                <button onClick={() => setShowCaptchaModal(false)} className="text-gray-600 hover:text-gray-900 text-2xl">×</button>
+              </div>
+              <div className="px-6 py-4">
+                <p className="text-gray-700 mb-4 text-sm sm:text-base">
+                  Enter the CAPTCHA to verify: <strong className="text-amber-700 break-all">{pendingGSTNumber}</strong>
+                </p>
+                {captchaLoading ? (
+                  <div className="flex flex-col justify-center items-center py-12">
+                    <div className="w-12 h-12 border-4 border-amber-200 border-t-amber-600 rounded-full animate-spin mb-4"></div>
+                    <p className="text-gray-600 font-medium">Loading CAPTCHA...</p>
                   </div>
                 ) : (
-                  <div>
-                    <label 
-                      htmlFor="logo-upload" 
-                      className="btn btn-primary"
-                      style={{ cursor: 'pointer', display: 'inline-block' }}
-                    >
-                      Upload Logo
-                    </label>
-                    <input
-                      id="logo-upload"
-                      type="file"
-                      accept="image/*"
-                      onChange={handleImageUpload('logo')}
-                      style={{ display: 'none' }}
-                    />
-                    <p style={{ marginTop: '0.5rem', fontSize: '0.875rem', color: '#666' }}>
-                      Maximum size: 2MB | Formats: JPG, PNG, GIF
-                    </p>
-                  </div>
+                  <>
+                    <div className="text-center mb-4">
+                      <img src={captchaImage} alt="CAPTCHA" className="max-w-full border-2 border-gray-300 rounded-lg cursor-pointer hover:border-amber-500 transition-colors mx-auto" onClick={initializeCaptcha} />
+                      <button onClick={initializeCaptcha} className="mt-2 text-xs sm:text-sm text-amber-600 hover:text-amber-700 font-medium flex items-center gap-1 mx-auto">
+                        <RefreshCw className="w-4 h-4" />
+                        Click to refresh CAPTCHA
+                      </button>
+                    </div>
+                    <div className="space-y-2 mb-4">
+                      <label className="block text-sm font-semibold text-gray-700">Enter CAPTCHA *</label>
+                      <input type="text" value={captchaInput} onChange={(e) => setCaptchaInput(e.target.value)} placeholder="Enter the text shown above" autoFocus
+                        onKeyPress={(e) => { if (e.key === 'Enter') verifyGSTWithCaptcha(); }}
+                        className="w-full px-4 py-2.5 border-2 border-gray-300 rounded-lg focus:border-amber-500 focus:ring-4 focus:ring-amber-100 transition-all text-sm sm:text-base" />
+                    </div>
+                    <div className="flex flex-col sm:flex-row gap-3">
+                      <button onClick={verifyGSTWithCaptcha} disabled={verifyingGST}
+                        className="inline-flex items-center justify-center gap-2 px-6 py-2.5 font-semibold rounded-lg bg-gradient-to-r from-amber-500 to-orange-600 text-white hover:from-amber-600 hover:to-orange-700 transition-all shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed w-full sm:flex-1 text-sm sm:text-base">
+                        {verifyingGST ? <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>Verifying...</> : <><Shield className="w-4 h-4" />Verify GST</>}
+                      </button>
+                      <button onClick={() => setShowCaptchaModal(false)} disabled={verifyingGST}
+                        className="inline-flex items-center justify-center gap-2 px-6 py-2.5 font-semibold rounded-lg bg-white border-2 border-gray-300 text-gray-700 hover:border-amber-500 hover:bg-amber-50 transition-all disabled:opacity-50 disabled:cursor-not-allowed w-full sm:flex-1 text-sm sm:text-base">
+                        Skip
+                      </button>
+                    </div>
+                  </>
                 )}
               </div>
             </div>
-
-            {/* Company Details Form */}
-            <div className="card">
-              <div className="card-header">Company Information</div>
-              
-              <div className="form-group">
-                <label className="form-label">GST Number *</label>
-                <div style={{ display: 'flex', gap: '0.5rem' }}>
-                  <input
-                    type="text"
-                    name="gstNumber"
-                    className="form-control"
-                    value={formData.gstNumber}
-                    onChange={handleGSTNumberChange}
-                    placeholder="Enter 15-digit GST Number"
-                    maxLength="15"
-                    required
-                    style={{ flex: 1 }}
-                  />
-                  <button
-                    type="button"
-                    onClick={triggerGSTVerification}
-                    className="btn btn-primary"
-                    disabled={formData.gstNumber.length !== 15}
-                  >
-                    Verify GST
-                  </button>
-                </div>
-                <small className="text-muted">{formData.gstNumber.length}/15 characters</small>
-              </div>
-
-              <div className="form-group">
-                <label className="form-label">Company Name *</label>
-                <input
-                  type="text"
-                  name="companyName"
-                  className="form-control"
-                  value={formData.companyName}
-                  onChange={handleChange}
-                  required
-                />
-              </div>
-
-              <div className="form-group">
-                <label className="form-label">Address *</label>
-                <textarea
-                  name="address"
-                  className="form-control"
-                  value={formData.address}
-                  onChange={handleChange}
-                  rows="3"
-                  required
-                />
-              </div>
-
-              <div className="form-group">
-                <label className="form-label">City *</label>
-                <input
-                  type="text"
-                  name="city"
-                  className="form-control"
-                  value={formData.city}
-                  onChange={handleChange}
-                  required
-                />
-              </div>
-
-              <div className="grid-2">
-                <div className="form-group">
-                  <label className="form-label">State *</label>
-                  <input
-                    type="text"
-                    name="state"
-                    className="form-control"
-                    value={formData.state}
-                    onChange={handleChange}
-                    required
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label className="form-label">State Code *</label>
-                  <input
-                    type="text"
-                    name="stateCode"
-                    className="form-control"
-                    value={formData.stateCode}
-                    onChange={handleChange}
-                    maxLength="2"
-                    required
-                  />
-                </div>
-              </div>
-
-              <div className="grid-2">
-                <div className="form-group">
-                  <label className="form-label">Mobile</label>
-                  <input
-                    type="tel"
-                    name="mobile"
-                    className="form-control"
-                    value={formData.mobile}
-                    onChange={handleChange}
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label className="form-label">Email</label>
-                  <input
-                    type="email"
-                    name="email"
-                    className="form-control"
-                    value={formData.email}
-                    onChange={handleChange}
-                  />
-                </div>
-              </div>
-            </div>
           </div>
         )}
 
-       {/* Tab: Bank & Press Details */}
-        {activeTab === 'bank' && (
-          <div className="tab-content">
-            {/* Bank Details */}
-            <div className="card">
-              <div className="card-header">Bank Details</div>
-              
-              <div className="form-group">
-                <label className="form-label">Bank Name</label>
-                <input
-                  type="text"
-                  name="bankName"
-                  className="form-control"
-                  value={formData.bankName}
-                  onChange={handleChange}
-                />
+        {/* Main Layout */}
+        <div className="flex flex-col lg:flex-row gap-6">
+          {/* Desktop Sidebar */}
+          <div className="hidden lg:block lg:w-72 flex-shrink-0">
+            <div className="bg-white rounded-xl shadow-sm border-2 border-amber-200 overflow-hidden sticky top-6">
+              <div className="bg-gradient-to-r from-amber-50 to-orange-50 px-4 py-3 border-b-2 border-amber-200">
+                <h2 className="font-bold text-gray-900 flex items-center gap-2">
+                  <SettingsIcon className="w-5 h-5 text-amber-600" />
+                  Settings Menu
+                </h2>
               </div>
-
-              <div className="grid-2">
-                <div className="form-group">
-                  <label className="form-label">Account Number</label>
-                  <input
-                    type="text"
-                    name="accountNumber"
-                    className="form-control"
-                    value={formData.accountNumber}
-                    onChange={handleChange}
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label className="form-label">IFSC Code</label>
-                  <input
-                    type="text"
-                    name="ifscCode"
-                    className="form-control"
-                    value={formData.ifscCode}
-                    onChange={handleChange}
-                    style={{ textTransform: 'uppercase' }}
-                  />
-                </div>
-              </div>
-
-              <div className="form-group">
-                <label className="form-label">Branch Name</label>
-                <input
-                  type="text"
-                  name="branchName"
-                  className="form-control"
-                  value={formData.branchName}
-                  onChange={handleChange}
-                />
-              </div>
-            </div>
-
-            {/* Ganth Press Details */}
-            <div className="card">
-              <div className="card-header">Ganth Press Details</div>
-              <p className="text-muted mb-3" style={{ fontSize: '0.875rem' }}>
-                These details will appear on delivery challans
-              </p>
-              
-              <div className="form-group">
-                <label className="form-label">Press Name</label>
-                <input
-                  type="text"
-                  name="ganthPressName"
-                  className="form-control"
-                  value={formData.ganthPressName}
-                  onChange={handleChange}
-                />
-              </div>
-
-              <div className="form-group">
-                <label className="form-label">Press Address</label>
-                <textarea
-                  name="ganthPressAddress"
-                  className="form-control"
-                  value={formData.ganthPressAddress}
-                  onChange={handleChange}
-                  rows="3"
-                />
-              </div>
+              <nav className="p-2">
+                {tabs.map((tab) => {
+                  const Icon = tab.icon;
+                  return (
+                    <button key={tab.id} onClick={() => setActiveTab(tab.id)}
+                      className={`w-full flex items-start gap-3 px-4 py-3 rounded-lg transition-all mb-1 text-left ${
+                        activeTab === tab.id ? 'bg-gradient-to-r from-amber-100 to-orange-100 border-2 border-amber-400 shadow-sm' : 'hover:bg-amber-50 border-2 border-transparent'
+                      }`}>
+                      <Icon className={`w-5 h-5 flex-shrink-0 mt-0.5 ${activeTab === tab.id ? 'text-amber-700' : 'text-gray-500'}`} />
+                      <div className="flex-1 min-w-0">
+                        <div className={`font-semibold ${activeTab === tab.id ? 'text-amber-900' : 'text-gray-700'}`}>{tab.label}</div>
+                        <div className="text-xs text-gray-500 mt-0.5">{tab.description}</div>
+                      </div>
+                      {activeTab === tab.id && <ChevronRight className="w-5 h-5 text-amber-600 flex-shrink-0" />}
+                    </button>
+                  );
+                })}
+              </nav>
             </div>
           </div>
-        )}
 
-        {/* Tab: Number Series */}
-        {activeTab === 'numbering' && (
-          <div className="tab-content">
-            {/* Invoice Numbers */}
-            <div className="card">
-              <div className="card-header">Invoice Number Series</div>
-              
-              <div className="grid-2">
-                <div className="form-group">
-                  <label className="form-label">Prefix</label>
-                  <input
-                    type="text"
-                    className="form-control"
-                    value={formData.numberSeries.invoicePrefix}
-                    onChange={handleNestedChange('numberSeries', 'invoicePrefix')}
-                    placeholder="INV"
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label className="form-label">Year Format</label>
-                  <select
-                    className="form-control"
-                    value={formData.numberSeries.invoiceYearFormat}
-                    onChange={handleNestedChange('numberSeries', 'invoiceYearFormat')}
-                  >
-                    <option value="none">No Year</option>
-                    <option value="YY">YY (24)</option>
-                    <option value="YYYY">YYYY (2024)</option>
-                    <option value="YYYY-YY">YYYY-YY (2024-25)</option>
-                  </select>
+          {/* Mobile Navigation */}
+          <div className="lg:hidden">
+            <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="w-full bg-white rounded-xl shadow-sm border-2 border-amber-200 px-4 py-3 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                {React.createElement(tabs.find(t => t.id === activeTab)?.icon || SettingsIcon, { className: "w-5 h-5 text-amber-600" })}
+                <div className="text-left">
+                  <div className="font-semibold text-gray-900">{tabs.find(t => t.id === activeTab)?.label}</div>
+                  <div className="text-xs text-gray-500">{tabs.find(t => t.id === activeTab)?.description}</div>
                 </div>
               </div>
-
-              <div className="grid-2">
-                <div className="form-group">
-                  <label className="form-label">Start Number</label>
-                  <input
-                    type="number"
-                    className="form-control"
-                    value={formData.numberSeries.invoiceStartNumber}
-                    onChange={handleNestedChange('numberSeries', 'invoiceStartNumber')}
-                    min="1"
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label className="form-label">Current Number</label>
-                  <input
-                    type="number"
-                    className="form-control"
-                    value={formData.numberSeries.invoiceCurrentNumber}
-                    onChange={handleNestedChange('numberSeries', 'invoiceCurrentNumber')}
-                    min="0"
-                  />
-                </div>
+              <Menu className="w-5 h-5 text-gray-500" />
+            </button>
+            {mobileMenuOpen && (
+              <div className="mt-2 bg-white rounded-xl shadow-lg border-2 border-amber-200 overflow-hidden">
+                {tabs.map((tab) => {
+                  const Icon = tab.icon;
+                  return (
+                    <button key={tab.id} onClick={() => { setActiveTab(tab.id); setMobileMenuOpen(false); }}
+                      className={`w-full flex items-center gap-3 px-4 py-3 border-b border-gray-100 last:border-b-0 transition-all ${
+                        activeTab === tab.id ? 'bg-gradient-to-r from-amber-50 to-orange-50' : 'hover:bg-amber-50'
+                      }`}>
+                      <Icon className={`w-5 h-5 ${activeTab === tab.id ? 'text-amber-700' : 'text-gray-500'}`} />
+                      <div className="flex-1 text-left">
+                        <div className={`font-semibold text-sm ${activeTab === tab.id ? 'text-amber-900' : 'text-gray-700'}`}>{tab.label}</div>
+                      </div>
+                    </button>
+                  );
+                })}
               </div>
-
-              <div className="form-group">
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={formData.numberSeries.invoiceResetYearly}
-                    onChange={handleNestedChange('numberSeries', 'invoiceResetYearly')}
-                  />
-                  <span>Reset counter yearly (on January 1st)</span>
-                </label>
-              </div>
-
-              <div className="alert alert-info mt-3">
-                <strong>Next Invoice Number: </strong>
-                <span className="text-primary-gradient font-bold">{generateNumberPreview('invoice')}</span>
-              </div>
-            </div>
-
-            {/* Challan Numbers */}
-            <div className="card">
-              <div className="card-header">Challan Number Series</div>
-              
-              <div className="grid-2">
-                <div className="form-group">
-                  <label className="form-label">Prefix</label>
-                  <input
-                    type="text"
-                    className="form-control"
-                    value={formData.numberSeries.challanPrefix}
-                    onChange={handleNestedChange('numberSeries', 'challanPrefix')}
-                    placeholder="DC"
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label className="form-label">Year Format</label>
-                  <select
-                    className="form-control"
-                    value={formData.numberSeries.challanYearFormat}
-                    onChange={handleNestedChange('numberSeries', 'challanYearFormat')}
-                  >
-                    <option value="none">No Year</option>
-                    <option value="YY">YY (24)</option>
-                    <option value="YYYY">YYYY (2024)</option>
-                    <option value="YYYY-YY">YYYY-YY (2024-25)</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="grid-2">
-                <div className="form-group">
-                  <label className="form-label">Start Number</label>
-                  <input
-                    type="number"
-                    className="form-control"
-                    value={formData.numberSeries.challanStartNumber}
-                    onChange={handleNestedChange('numberSeries', 'challanStartNumber')}
-                    min="1"
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label className="form-label">Current Number</label>
-                  <input
-                    type="number"
-                    className="form-control"
-                    value={formData.numberSeries.challanCurrentNumber}
-                    onChange={handleNestedChange('numberSeries', 'challanCurrentNumber')}
-                    min="0"
-                  />
-                </div>
-              </div>
-
-              <div className="form-group">
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={formData.numberSeries.challanResetYearly}
-                    onChange={handleNestedChange('numberSeries', 'challanResetYearly')}
-                  />
-                  <span>Reset counter yearly</span>
-                </label>
-              </div>
-
-              <div className="alert alert-info mt-3">
-                <strong>Next Challan Number: </strong>
-                <span className="text-primary-gradient font-bold">{generateNumberPreview('challan')}</span>
-              </div>
-            </div>
-
-            {/* Purchase Numbers */}
-            <div className="card">
-              <div className="card-header">Purchase Order Number Series</div>
-              
-              <div className="grid-2">
-                <div className="form-group">
-                  <label className="form-label">Prefix</label>
-                  <input
-                    type="text"
-                    className="form-control"
-                    value={formData.numberSeries.purchasePrefix}
-                    onChange={handleNestedChange('numberSeries', 'purchasePrefix')}
-                    placeholder="PO"
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label className="form-label">Year Format</label>
-                  <select
-                    className="form-control"
-                    value={formData.numberSeries.purchaseYearFormat}
-                    onChange={handleNestedChange('numberSeries', 'purchaseYearFormat')}
-                  >
-                    <option value="none">No Year</option>
-                    <option value="YY">YY (24)</option>
-                    <option value="YYYY">YYYY (2024)</option>
-                    <option value="YYYY-YY">YYYY-YY (2024-25)</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="grid-2">
-                <div className="form-group">
-                  <label className="form-label">Start Number</label>
-                  <input
-                    type="number"
-                    className="form-control"
-                    value={formData.numberSeries.purchaseStartNumber}
-                    onChange={handleNestedChange('numberSeries', 'purchaseStartNumber')}
-                    min="1"
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label className="form-label">Current Number</label>
-                  <input
-                    type="number"
-                    className="form-control"
-                    value={formData.numberSeries.purchaseCurrentNumber}
-                    onChange={handleNestedChange('numberSeries', 'purchaseCurrentNumber')}
-                    min="0"
-                  />
-                </div>
-              </div>
-
-              <div className="form-group">
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={formData.numberSeries.purchaseResetYearly}
-                    onChange={handleNestedChange('numberSeries', 'purchaseResetYearly')}
-                  />
-                  <span>Reset counter yearly</span>
-                </label>
-              </div>
-
-              <div className="alert alert-info mt-3">
-                <strong>Next Purchase Number: </strong>
-                <span className="text-primary-gradient font-bold">{generateNumberPreview('purchase')}</span>
-              </div>
-            </div>
+            )}
           </div>
-        )}
 
-        {/* Tab: Invoice Format (UPDATED) */}
-        {activeTab === 'invoice' && (
-          <div className="tab-content">
-            <div className="card">
-              <div className="card-header">Invoice Layout Settings</div>
-              <p className="text-muted mb-3" style={{ fontSize: '0.875rem' }}>
-                Configure how your tax invoices will appear when printed
-              </p>
+          {/* Main Content */}
+          <div className="flex-1 min-w-0">
+            <form onSubmit={handleSubmit} className="space-y-6">
               
-              {/* Logo Settings */}
-              <div className="form-group">
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={formData.invoiceFormat?.showLogo !== false}
-                    onChange={handleNestedChange('invoiceFormat', 'showLogo')}
-                  />
-                  <strong>Show Company Logo</strong>
-                </label>
-              </div>
+              {/* Tab: Company Details */}
+              {activeTab === 'company' && (
+                <div className="space-y-6">
+                  {/* Company Logo */}
+                  <div className="bg-white rounded-xl shadow-sm border-2 border-amber-200 p-4 sm:p-6">
+                    <h3 className="text-base sm:text-lg font-bold text-gray-900 mb-4">Company Logo</h3>
+                    <div className="text-center">
+                      {formData.logo ? (
+                        <div className="space-y-4">
+                          <img src={formData.logo} alt="Logo" className="max-h-32 mx-auto border-2 border-gray-200 rounded-lg p-2" />
+                          <button type="button" onClick={() => setFormData({ ...formData, logo: '' })}
+                            className="inline-flex items-center gap-2 px-4 py-2 font-semibold rounded-lg bg-gradient-to-r from-red-500 to-rose-600 text-white hover:from-red-600 hover:to-rose-700 transition-all text-sm sm:text-base">
+                            <X className="w-4 h-4" />Remove Logo
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="space-y-3">
+                          <label htmlFor="logo-upload" 
+                            className="inline-flex items-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3 font-semibold rounded-lg bg-gradient-to-r from-amber-500 to-orange-600 text-white hover:from-amber-600 hover:to-orange-700 transition-all cursor-pointer shadow-sm hover:shadow-md text-sm sm:text-base">
+                            <Upload className="w-4 sm:w-5 h-4 sm:h-5" />Upload Logo
+                          </label>
+                          <input id="logo-upload" type="file" accept="image/*" onChange={handleImageUpload('logo')} className="hidden" />
+                          <p className="text-xs sm:text-sm text-gray-600">Maximum size: 2MB • Formats: JPG, PNG, GIF</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
 
-              {(formData.invoiceFormat?.showLogo !== false) && (
-                <div className="form-group" style={{ marginLeft: '30px' }}>
-                  <label className="form-label">Logo Position</label>
-                  <select
-                    className="form-control"
-                    value={formData.invoiceFormat?.logoPosition || 'left'}
-                    onChange={handleNestedChange('invoiceFormat', 'logoPosition')}
-                  >
-                    <option value="left">Left</option>
-                    <option value="right">Right</option>
-                  </select>
-                  <small className="text-muted mt-1 block">
-                    Position of the logo in the invoice header
-                  </small>
+                  {/* Company Information */}
+                  <div className="bg-white rounded-xl shadow-sm border-2 border-amber-200 p-4 sm:p-6 space-y-4">
+                    <h3 className="text-base sm:text-lg font-bold text-gray-900 mb-4">Company Information</h3>
+                    
+                    <div className="space-y-2">
+                      <label className="block text-sm font-semibold text-gray-700">GST Number *</label>
+                      <div className="flex flex-col sm:flex-row gap-2">
+                        <input type="text" name="gstNumber" value={formData.gstNumber} onChange={handleGSTNumberChange}
+                          placeholder="Enter 15-digit GST Number" maxLength="15" required
+                          className="flex-1 px-4 py-2.5 border-2 border-gray-300 rounded-lg focus:border-amber-500 focus:ring-4 focus:ring-amber-100 transition-all font-mono text-sm sm:text-base" />
+                        <button type="button" onClick={triggerGSTVerification} disabled={formData.gstNumber.length !== 15}
+                          className="inline-flex items-center justify-center gap-2 px-4 py-2.5 font-semibold rounded-lg bg-gradient-to-r from-amber-500 to-orange-600 text-white hover:from-amber-600 hover:to-orange-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap text-sm sm:text-base">
+                          <Shield className="w-4 h-4" />Verify
+                        </button>
+                      </div>
+                      <small className="text-gray-500 text-xs sm:text-sm">{formData.gstNumber.length}/15 characters</small>
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="block text-sm font-semibold text-gray-700">Company Name *</label>
+                      <input type="text" name="companyName" value={formData.companyName} onChange={handleChange} required
+                        className="w-full px-4 py-2.5 border-2 border-gray-300 rounded-lg focus:border-amber-500 focus:ring-4 focus:ring-amber-100 transition-all text-sm sm:text-base" />
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="block text-sm font-semibold text-gray-700">Address *</label>
+                      <textarea name="address" value={formData.address} onChange={handleChange} rows="3" required
+                        className="w-full px-4 py-2.5 border-2 border-gray-300 rounded-lg focus:border-amber-500 focus:ring-4 focus:ring-amber-100 resize-vertical min-h-[100px] transition-all text-sm sm:text-base" />
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="block text-sm font-semibold text-gray-700">City *</label>
+                      <input type="text" name="city" value={formData.city} onChange={handleChange} required
+                        className="w-full px-4 py-2.5 border-2 border-gray-300 rounded-lg focus:border-amber-500 focus:ring-4 focus:ring-amber-100 transition-all text-sm sm:text-base" />
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <label className="block text-sm font-semibold text-gray-700">State *</label>
+                        <input type="text" name="state" value={formData.state} onChange={handleChange} required
+                          className="w-full px-4 py-2.5 border-2 border-gray-300 rounded-lg focus:border-amber-500 focus:ring-4 focus:ring-amber-100 transition-all text-sm sm:text-base" />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="block text-sm font-semibold text-gray-700">State Code *</label>
+                        <input type="text" name="stateCode" value={formData.stateCode} onChange={handleChange} maxLength="2" required
+                          className="w-full px-4 py-2.5 border-2 border-gray-300 rounded-lg focus:border-amber-500 focus:ring-4 focus:ring-amber-100 transition-all text-sm sm:text-base" />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <label className="block text-sm font-semibold text-gray-700">Mobile</label>
+                        <input type="tel" name="mobile" value={formData.mobile} onChange={handleChange}
+                          className="w-full px-4 py-2.5 border-2 border-gray-300 rounded-lg focus:border-amber-500 focus:ring-4 focus:ring-amber-100 transition-all text-sm sm:text-base" />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="block text-sm font-semibold text-gray-700">Email</label>
+                        <input type="email" name="email" value={formData.email} onChange={handleChange}
+                          className="w-full px-4 py-2.5 border-2 border-gray-300 rounded-lg focus:border-amber-500 focus:ring-4 focus:ring-amber-100 transition-all text-sm sm:text-base" />
+                      </div>
+                    </div>
+                  </div>
                 </div>
               )}
 
-              {/* Color Mode */}
-              <div className="form-group">
-                <label className="form-label">Print Color Mode</label>
-                <select
-                  className="form-control"
-                  value={formData.invoiceFormat?.colorMode || 'color'}
-                  onChange={handleNestedChange('invoiceFormat', 'colorMode')}
-                >
-                  <option value="color">Color (Standard colors with backgrounds)</option>
-                  <option value="black_white">Black & White (All elements in black)</option>
-                </select>
-                <small className="text-muted mt-1 block">
-                  {formData.invoiceFormat?.colorMode === 'black_white' ? 
-                    'Logo will also be converted to grayscale' : 
-                    'Invoice will print with colored backgrounds and elements'}
-                </small>
-              </div>
-            </div>
-
-            {/* Typography Settings */}
-            <div className="card">
-              <div className="card-header">Typography Settings</div>
-              
-              <div className="form-group">
-                <label className="form-label">Font Family</label>
-                <select
-                  className="form-control"
-                  value={formData.invoiceFormat?.fontFamily || 'Segoe UI'}
-                  onChange={handleNestedChange('invoiceFormat', 'fontFamily')}
-                >
-                  <option value="Segoe UI">Segoe UI (Modern, Clean)</option>
-                  <option value="Arial">Arial (Classic, Universal)</option>
-                  <option value="Times New Roman">Times New Roman (Traditional, Formal)</option>
-                  <option value="Georgia">Georgia (Elegant, Serif)</option>
-                  <option value="Courier New">Courier New (Monospace)</option>
-                  <option value="Verdana">Verdana (Web-friendly)</option>
-                </select>
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem' }}>
-                <div className="form-group">
-                  <label className="form-label">Base Font Size (px)</label>
-                  <input
-                    type="number"
-                    className="form-control"
-                    value={formData.invoiceFormat?.fontSize?.base || 11}
-                    onChange={handleInvoiceFontSizeChange('base')}
-                    min="8"
-                    max="16"
-                  />
-                  <small className="text-muted mt-1 block">Regular text (8-16)</small>
-                </div>
-
-                <div className="form-group">
-                  <label className="form-label">Company Name Size (px)</label>
-                  <input
-                    type="number"
-                    className="form-control"
-                    value={formData.invoiceFormat?.fontSize?.companyName || 48}
-                    onChange={handleInvoiceFontSizeChange('companyName')}
-                    min="24"
-                    max="72"
-                  />
-                  <small className="text-muted mt-1 block">Header text (24-72)</small>
-                </div>
-
-                <div className="form-group">
-                  <label className="form-label">Heading Size (px)</label>
-                  <input
-                    type="number"
-                    className="form-control"
-                    value={formData.invoiceFormat?.fontSize?.heading || 12}
-                    onChange={handleInvoiceFontSizeChange('heading')}
-                    min="10"
-                    max="18"
-                  />
-                  <small className="text-muted mt-1 block">Section headings (10-18)</small>
-                </div>
-              </div>
-
-              <div className="form-group">
-                <label className="form-label">Font Weight</label>
-                <select
-                  className="form-control"
-                  value={formData.invoiceFormat?.fontWeight || 'normal'}
-                  onChange={handleNestedChange('invoiceFormat', 'fontWeight')}
-                >
-                  <option value="normal">Normal</option>
-                  <option value="bold">Bold</option>
-                </select>
-                <small className="text-muted mt-1 block">Applies to regular text throughout the invoice</small>
-              </div>
-            </div>
-
-            {/* Display Options */}
-            <div className="card">
-              <div className="card-header">Content Display Options</div>
-              <p className="text-muted mb-3" style={{ fontSize: '0.875rem' }}>
-                When unchecked, the section heading will remain but content will be blank
-              </p>
-              
-              <div className="flex flex-col gap-2">
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={formData.invoiceFormat?.showBankDetails !== false}
-                    onChange={handleNestedChange('invoiceFormat', 'showBankDetails')}
-                  />
-                  <strong>Show Bank Details</strong>
-                  <span className="text-muted text-sm ml-2">
-                    (Account number, IFSC, PAN)
-                  </span>
-                </label>
-
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={formData.invoiceFormat?.showTerms !== false}
-                    onChange={handleNestedChange('invoiceFormat', 'showTerms')}
-                  />
-                  <strong>Show Terms & Conditions</strong>
-                  <span className="text-muted text-sm ml-2">
-                    (From Terms tab)
-                  </span>
-                </label>
-              </div>
-            </div>
-
-            {/* Preview Note */}
-            <div className="alert alert-success">
-              <strong>💡 Preview Tip:</strong> Print an invoice after saving to see how these settings affect the layout
-            </div>
-          </div>
-        )}
-
-        {/* Tab: Challan Format (CORRECTED) */}
-{activeTab === 'challan' && (
-  <div className="tab-content">
-    <div className="card">
-      <div className="card-header">Challan Layout Settings</div>
-      <p className="text-muted mb-3" style={{ fontSize: '0.875rem' }}>
-        Configure how your delivery challans will appear when printed
-      </p>
-      
-      {/* Logo Settings - Only show/hide toggle, no position */}
-      <div className="form-group">
-        <label className="flex items-center gap-2 cursor-pointer">
-          <input
-            type="checkbox"
-            checked={formData.challanFormat?.showLogo !== false}
-            onChange={handleNestedChange('challanFormat', 'showLogo')}
-          />
-          <strong>Show Company Logo</strong>
-        </label>
-        <small className="text-muted mt-1 block ml-6">
-          Logo will appear as a watermark in the background center of each challan
-        </small>
-      </div>
-
-      {/* Color Mode */}
-      <div className="form-group">
-        <label className="form-label">Print Color Mode</label>
-        <select
-          className="form-control"
-          value={formData.challanFormat?.colorMode || 'color'}
-          onChange={handleNestedChange('challanFormat', 'colorMode')}
-        >
-          <option value="color">Color (Standard colors with backgrounds)</option>
-          <option value="black_white">Black & White (All elements in black)</option>
-        </select>
-        <small className="text-muted mt-1 block">
-          {formData.challanFormat?.colorMode === 'black_white' ? 
-            'All colors including logo will be converted to grayscale' : 
-            'Challan will print with colored backgrounds and elements'}
-        </small>
-      </div>
-    </div>
-
-    {/* Typography Settings */}
-    <div className="card">
-      <div className="card-header">Typography Settings</div>
-      
-      <div className="form-group">
-        <label className="form-label">Font Family</label>
-        <select
-          className="form-control"
-          value={formData.challanFormat?.fontFamily || 'Segoe UI'}
-          onChange={handleNestedChange('challanFormat', 'fontFamily')}
-        >
-          <option value="Segoe UI">Segoe UI (Modern, Clean)</option>
-          <option value="Arial">Arial (Classic, Universal)</option>
-          <option value="Times New Roman">Times New Roman (Traditional, Formal)</option>
-          <option value="Georgia">Georgia (Elegant, Serif)</option>
-          <option value="Courier New">Courier New (Monospace)</option>
-          <option value="Verdana">Verdana (Web-friendly)</option>
-        </select>
-      </div>
-
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem' }}>
-        <div className="form-group">
-          <label className="form-label">Base Font Size (px)</label>
-          <input
-            type="number"
-            className="form-control"
-            value={formData.challanFormat?.fontSize?.base || 11}
-            onChange={handleChallanFontSizeChange('base')}
-            min="8"
-            max="16"
-          />
-          <small className="text-muted mt-1 block">Regular text (8-16)</small>
-        </div>
-
-        <div className="form-group">
-          <label className="form-label">Company Name Size (px)</label>
-          <input
-            type="number"
-            className="form-control"
-            value={formData.challanFormat?.fontSize?.companyName || 22}
-            onChange={handleChallanFontSizeChange('companyName')}
-            min="16"
-            max="32"
-          />
-          <small className="text-muted mt-1 block">Header text (16-32)</small>
-        </div>
-
-        <div className="form-group">
-          <label className="form-label">Heading Size (px)</label>
-          <input
-            type="number"
-            className="form-control"
-            value={formData.challanFormat?.fontSize?.heading || 12}
-            onChange={handleChallanFontSizeChange('heading')}
-            min="10"
-            max="18"
-          />
-          <small className="text-muted mt-1 block">Section headings (10-18)</small>
-        </div>
-      </div>
-
-      <div className="form-group">
-        <label className="form-label">Font Weight</label>
-        <select
-          className="form-control"
-          value={formData.challanFormat?.fontWeight || 'normal'}
-          onChange={handleNestedChange('challanFormat', 'fontWeight')}
-        >
-          <option value="normal">Normal</option>
-          <option value="bold">Bold</option>
-        </select>
-        <small className="text-muted mt-1 block">Applies to regular text throughout the challan</small>
-      </div>
-    </div>
-
-    {/* Display Options */}
-    <div className="card">
-      <div className="card-header">Content Display Options</div>
-      
-      <div className="flex flex-col gap-2">
-        <label className="flex items-center gap-2 cursor-pointer">
-          <input
-            type="checkbox"
-            checked={formData.challanFormat?.showGanthPress !== false}
-            onChange={handleNestedChange('challanFormat', 'showGanthPress')}
-          />
-          <strong>Show Ganth Press Details</strong>
-          <span className="text-muted text-sm ml-2">
-            (Press name and address)
-          </span>
-        </label>
-
-        <label className="flex items-center gap-2 cursor-pointer">
-          <input
-            type="checkbox"
-            checked={formData.challanFormat?.showBaleDetails !== false}
-            onChange={handleNestedChange('challanFormat', 'showBaleDetails')}
-          />
-          <strong>Show Bale Details Section</strong>
-          <span className="text-muted text-sm ml-2">
-            (Quality, Bale Number, Pieces count)
-          </span>
-        </label>
-
-        <label className="flex items-center gap-2 cursor-pointer">
-          <input
-            type="checkbox"
-            checked={formData.challanFormat?.showWeights !== false}
-            onChange={handleNestedChange('challanFormat', 'showWeights')}
-          />
-          <strong>Show Weight Column</strong>
-          <span className="text-muted text-sm ml-2">
-            (Weight in kg for each piece)
-          </span>
-        </label>
-      </div>
-    </div>
-
-    {/* Preview Note */}
-    <div className="alert alert-success">
-      <strong>💡 Preview Tip:</strong> Print a challan after saving to see how these settings affect the layout
-    </div>
-  </div>
-)}
-
-        {/* Tab: Terms & Conditions */}
-        {activeTab === 'terms' && (
-          <div className="tab-content">
-            <div className="card">
-              <div className="card-header">Invoice Terms & Conditions</div>
-              <p className="text-muted mb-3" style={{ fontSize: '0.875rem' }}>
-                These will appear at the bottom of tax invoices (Maximum 100 characters per line)
-              </p>
-              
-              <div className="form-group">
-                <label className="form-label">Line 1</label>
-                <input
-                  type="text"
-                  className="form-control"
-                  value={formData.terms.invoice.line1}
-                  onChange={handleTermsChange('invoice', 'line1')}
-                  maxLength="100"
-                  placeholder="E.g., Payment due within 30 days"
-                />
-                <small className="text-muted">{(formData.terms.invoice.line1 || '').length}/100</small>
-              </div>
-
-              <div className="form-group">
-                <label className="form-label">Line 2</label>
-                <input
-                  type="text"
-                  className="form-control"
-                  value={formData.terms.invoice.line2}
-                  onChange={handleTermsChange('invoice', 'line2')}
-                  maxLength="100"
-                  placeholder="E.g., Goods once sold cannot be returned"
-                />
-                <small className="text-muted">{(formData.terms.invoice.line2 || '').length}/100</small>
-              </div>
-
-              <div className="form-group">
-                <label className="form-label">Line 3</label>
-                <input
-                  type="text"
-                  className="form-control"
-                  value={formData.terms.invoice.line3}
-                  onChange={handleTermsChange('invoice', 'line3')}
-                  maxLength="100"
-                  placeholder="E.g., Subject to jurisdiction"
-                />
-                <small className="text-muted">{(formData.terms.invoice.line3 || '').length}/100</small>
-              </div>
-
-              <div className="form-group">
-                <label className="form-label">Line 4</label>
-                <input
-                  type="text"
-                  className="form-control"
-                  value={formData.terms.invoice.line4}
-                  onChange={handleTermsChange('invoice', 'line4')}
-                  maxLength="100"
-                  placeholder="E.g., Interest charged on overdue payments"
-                />
-                <small className="text-muted">{(formData.terms.invoice.line4 || '').length}/100</small>
-              </div>
-            </div>
-
-            <div className="card">
-              <div className="card-header">Challan Terms & Conditions</div>
-              <p className="text-muted mb-3" style={{ fontSize: '0.875rem' }}>
-                This will appear at the bottom of delivery challans (Maximum 150 characters)
-              </p>
-              
-              <div className="form-group">
-                <label className="form-label">Terms</label>
-                <textarea
-                  className="form-control"
-                  value={formData.terms.challan.line1}
-                  onChange={handleTermsChange('challan', 'line1')}
-                  maxLength="150"
-                  rows="3"
-                  placeholder="E.g., Any type of complaint regarding weight and folding will be entertained within 48Hrs."
-                />
-                <small className="text-muted">{(formData.terms.challan.line1 || '').length}/150 characters</small>
-              </div>
-            </div>
-
-            <div className="card">
-              <div className="card-header">Signature & Stamp</div>
-              
-              <div className="grid-2">
-                <div>
-                  <label className="form-label">Signature Image</label>
-                  {formData.signatureImage ? (
-                    <div style={{ textAlign: 'center' }}>
-                      <img 
-                        src={formData.signatureImage} 
-                        alt="Signature" 
-                        style={{ maxWidth: '200px', maxHeight: '100px', border: '1px solid #ddd' }} 
-                      />
-                      <button
-                        type="button"
-                        onClick={removeImage('signatureImage')}
-                        className="btn btn-danger btn-small"
-                        style={{ display: 'block', margin: '10px auto' }}
-                      >
-                        Remove
-                      </button>
+              {/* Tab: Bank & Press Details */}
+              {activeTab === 'bank' && (
+                <div className="space-y-6">
+                  <div className="bg-white rounded-xl shadow-sm border-2 border-amber-200 p-4 sm:p-6 space-y-4">
+                    <h3 className="text-base sm:text-lg font-bold text-gray-900 mb-4">Bank Details</h3>
+                    
+                    <div className="space-y-2">
+                      <label className="block text-sm font-semibold text-gray-700">Bank Name</label>
+                      <input type="text" name="bankName" value={formData.bankName} onChange={handleChange}
+                        className="w-full px-4 py-2.5 border-2 border-gray-300 rounded-lg focus:border-amber-500 focus:ring-4 focus:ring-amber-100 transition-all text-sm sm:text-base" />
                     </div>
-                  ) : (
-                    <div>
-                      <label htmlFor="signature-upload" className="btn btn-primary" style={{ cursor: 'pointer' }}>
-                        Upload Signature
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <label className="block text-sm font-semibold text-gray-700">Account Number</label>
+                        <input type="text" name="accountNumber" value={formData.accountNumber} onChange={handleChange}
+                          className="w-full px-4 py-2.5 border-2 border-gray-300 rounded-lg focus:border-amber-500 focus:ring-4 focus:ring-amber-100 transition-all text-sm sm:text-base" />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="block text-sm font-semibold text-gray-700">IFSC Code</label>
+                        <input type="text" name="ifscCode" value={formData.ifscCode} onChange={handleChange} style={{ textTransform: 'uppercase' }}
+                          className="w-full px-4 py-2.5 border-2 border-gray-300 rounded-lg focus:border-amber-500 focus:ring-4 focus:ring-amber-100 transition-all text-sm sm:text-base" />
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="block text-sm font-semibold text-gray-700">Branch Name</label>
+                      <input type="text" name="branchName" value={formData.branchName} onChange={handleChange}
+                        className="w-full px-4 py-2.5 border-2 border-gray-300 rounded-lg focus:border-amber-500 focus:ring-4 focus:ring-amber-100 transition-all text-sm sm:text-base" />
+                    </div>
+                  </div>
+
+                  <div className="bg-white rounded-xl shadow-sm border-2 border-amber-200 p-4 sm:p-6 space-y-4">
+                    <h3 className="text-base sm:text-lg font-bold text-gray-900 mb-2">Ganth Press Details</h3>
+                    <p className="text-xs sm:text-sm text-gray-600 mb-4">These details will appear on delivery challans</p>
+                    
+                    <div className="space-y-2">
+                      <label className="block text-sm font-semibold text-gray-700">Press Name</label>
+                      <input type="text" name="ganthPressName" value={formData.ganthPressName} onChange={handleChange}
+                        className="w-full px-4 py-2.5 border-2 border-gray-300 rounded-lg focus:border-amber-500 focus:ring-4 focus:ring-amber-100 transition-all text-sm sm:text-base" />
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="block text-sm font-semibold text-gray-700">Press Address</label>
+                      <textarea name="ganthPressAddress" value={formData.ganthPressAddress} onChange={handleChange} rows="3"
+                        className="w-full px-4 py-2.5 border-2 border-gray-300 rounded-lg focus:border-amber-500 focus:ring-4 focus:ring-amber-100 resize-vertical min-h-[100px] transition-all text-sm sm:text-base" />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Tab: Number Series */}
+              {activeTab === 'numbering' && (
+                <div className="space-y-6">
+                  {['invoice', 'challan', 'purchase'].map((type) => (
+                    <div key={type} className="bg-white rounded-xl shadow-sm border-2 border-amber-200 p-4 sm:p-6 space-y-4">
+                      <h3 className="text-base sm:text-lg font-bold text-gray-900 mb-4">
+                        {type.charAt(0).toUpperCase() + type.slice(1)} Number Series
+                      </h3>
+                      
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <label className="block text-sm font-semibold text-gray-700">Prefix</label>
+                          <input type="text" value={formData.numberSeries[`${type}Prefix`]}
+                            onChange={handleNestedChange('numberSeries', `${type}Prefix`)}
+                            placeholder={type === 'invoice' ? 'INV' : type === 'challan' ? 'DC' : 'PO'}
+                            className="w-full px-4 py-2.5 border-2 border-gray-300 rounded-lg focus:border-amber-500 focus:ring-4 focus:ring-amber-100 transition-all text-sm sm:text-base" />
+                        </div>
+                        <div className="space-y-2">
+                          <label className="block text-sm font-semibold text-gray-700">Year Format</label>
+                          <select value={formData.numberSeries[`${type}YearFormat`]}
+                            onChange={handleNestedChange('numberSeries', `${type}YearFormat`)}
+                            className="w-full px-4 py-2.5 border-2 border-gray-300 rounded-lg focus:border-amber-500 focus:ring-4 focus:ring-amber-100 transition-all text-sm sm:text-base">
+                            <option value="none">No Year</option>
+                            <option value="YY">YY (24)</option>
+                            <option value="YYYY">YYYY (2024)</option>
+                            <option value="YYYY-YY">YYYY-YY (2024-25)</option>
+                          </select>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <label className="block text-sm font-semibold text-gray-700">Start Number</label>
+                          <input type="number" value={formData.numberSeries[`${type}StartNumber`]}
+                            onChange={handleNestedChange('numberSeries', `${type}StartNumber`)} min="1"
+                            className="w-full px-4 py-2.5 border-2 border-gray-300 rounded-lg focus:border-amber-500 focus:ring-4 focus:ring-amber-100 transition-all text-sm sm:text-base" />
+                        </div>
+                        <div className="space-y-2">
+                          <label className="block text-sm font-semibold text-gray-700">Current Number</label>
+                          <input type="number" value={formData.numberSeries[`${type}CurrentNumber`]}
+                            onChange={handleNestedChange('numberSeries', `${type}CurrentNumber`)} min="0"
+                            className="w-full px-4 py-2.5 border-2 border-gray-300 rounded-lg focus:border-amber-500 focus:ring-4 focus:ring-amber-100 transition-all text-sm sm:text-base" />
+                        </div>
+                      </div>
+
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" checked={formData.numberSeries[`${type}ResetYearly`]}
+                          onChange={handleNestedChange('numberSeries', `${type}ResetYearly`)}
+                          className="w-4 h-4 text-amber-600 border-gray-300 rounded focus:ring-amber-500" />
+                        <span className="text-xs sm:text-sm font-medium text-gray-700">Reset counter yearly{type === 'invoice' ? ' (on January 1st)' : ''}</span>
                       </label>
-                      <input
-                        id="signature-upload"
-                        type="file"
-                        accept="image/*"
-                        onChange={handleImageUpload('signatureImage')}
-                        style={{ display: 'none' }}
-                      />
-                    </div>
-                  )}
-                </div>
 
-                <div>
-                  <label className="form-label">Stamp Image</label>
-                  {formData.stampImage ? (
-                    <div style={{ textAlign: 'center' }}>
-                      <img 
-                        src={formData.stampImage} 
-                        alt="Stamp" 
-                        style={{ maxWidth: '200px', maxHeight: '100px', border: '1px solid #ddd' }} 
-                      />
-                      <button
-                        type="button"
-                        onClick={removeImage('stampImage')}
-                        className="btn btn-danger btn-small"
-                        style={{ display: 'block', margin: '10px auto' }}
-                      >
-                        Remove
-                      </button>
+                      <div className="bg-gradient-to-r from-green-50 to-emerald-50 border-l-4 border-green-500 p-3 sm:p-4 rounded-lg">
+                        <p className="font-semibold text-green-800 text-sm sm:text-base">
+                          Next {type.charAt(0).toUpperCase() + type.slice(1)} Number: <span className="text-green-600">{generateNumberPreview(type)}</span>
+                        </p>
+                      </div>
                     </div>
-                  ) : (
-                    <div>
-                      <label htmlFor="stamp-upload" className="btn btn-primary" style={{ cursor: 'pointer' }}>
-                        Upload Stamp
+                  ))}
+                </div>
+              )}
+
+              {/* Tab: Invoice Format */}
+              {activeTab === 'invoice' && (
+                <div className="space-y-6">
+                  <div className="bg-white rounded-xl shadow-sm border-2 border-amber-200 p-4 sm:p-6 space-y-4">
+                    <h3 className="text-base sm:text-lg font-bold text-gray-900 mb-2">Invoice Layout Settings</h3>
+                    <p className="text-xs sm:text-sm text-gray-600 mb-4">Configure how your tax invoices will appear when printed</p>
+                    
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input type="checkbox" checked={formData.invoiceFormat?.showLogo !== false}
+                        onChange={handleNestedChange('invoiceFormat', 'showLogo')}
+                        className="w-4 h-4 text-amber-600 border-gray-300 rounded focus:ring-amber-500" />
+                      <strong className="text-sm font-semibold text-gray-700">Show Company Logo</strong>
+                    </label>
+
+                    {(formData.invoiceFormat?.showLogo !== false) && (
+                      <div className="ml-6 space-y-2">
+                        <label className="block text-sm font-semibold text-gray-700">Logo Position</label>
+                        <select value={formData.invoiceFormat?.logoPosition || 'left'}
+                          onChange={handleNestedChange('invoiceFormat', 'logoPosition')}
+                          className="w-full sm:w-64 px-4 py-2.5 border-2 border-gray-300 rounded-lg focus:border-amber-500 focus:ring-4 focus:ring-amber-100 transition-all text-sm sm:text-base">
+                          <option value="left">Left</option>
+                          <option value="right">Right</option>
+                        </select>
+                      </div>
+                    )}
+
+                    <div className="space-y-2">
+                      <label className="block text-sm font-semibold text-gray-700">Print Color Mode</label>
+                      <select value={formData.invoiceFormat?.colorMode || 'color'}
+                        onChange={handleNestedChange('invoiceFormat', 'colorMode')}
+                        className="w-full px-4 py-2.5 border-2 border-gray-300 rounded-lg focus:border-amber-500 focus:ring-4 focus:ring-amber-100 transition-all text-sm sm:text-base">
+                        <option value="color">Color (Standard colors with backgrounds)</option>
+                        <option value="black_white">Black & White (All elements in black)</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="bg-white rounded-xl shadow-sm border-2 border-amber-200 p-4 sm:p-6 space-y-4">
+                    <h3 className="text-base sm:text-lg font-bold text-gray-900 mb-4">Typography Settings</h3>
+                    
+                    <div className="space-y-2">
+                      <label className="block text-sm font-semibold text-gray-700">Font Family</label>
+                      <select value={formData.invoiceFormat?.fontFamily || 'Segoe UI'}
+                        onChange={handleNestedChange('invoiceFormat', 'fontFamily')}
+                        className="w-full px-4 py-2.5 border-2 border-gray-300 rounded-lg focus:border-amber-500 focus:ring-4 focus:ring-amber-100 transition-all text-sm sm:text-base">
+                        <option value="Segoe UI">Segoe UI (Modern, Clean)</option>
+                        <option value="Arial">Arial (Classic, Universal)</option>
+                        <option value="Times New Roman">Times New Roman (Traditional, Formal)</option>
+                        <option value="Georgia">Georgia (Elegant, Serif)</option>
+                        <option value="Courier New">Courier New (Monospace)</option>
+                        <option value="Verdana">Verdana (Web-friendly)</option>
+                      </select>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                      {[
+                        { field: 'base', label: 'Base Font Size', min: 8, max: 16, hint: 'Regular text (8-16)' },
+                        { field: 'companyName', label: 'Company Name Size', min: 24, max: 72, hint: 'Header text (24-72)' },
+                        { field: 'heading', label: 'Heading Size', min: 10, max: 18, hint: 'Section headings (10-18)' }
+                      ].map(({ field, label, min, max, hint }) => (
+                        <div key={field} className="space-y-2">
+                          <label className="block text-sm font-semibold text-gray-700">{label} (px)</label>
+                          <input type="number" value={formData.invoiceFormat?.fontSize?.[field] || (field === 'companyName' ? 48 : field === 'heading' ? 12 : 11)}
+                            onChange={handleInvoiceFontSizeChange(field)} min={min} max={max}
+                            className="w-full px-4 py-2.5 border-2 border-gray-300 rounded-lg focus:border-amber-500 focus:ring-4 focus:ring-amber-100 transition-all text-sm sm:text-base" />
+                          <small className="block text-gray-500 text-xs">{hint}</small>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="block text-sm font-semibold text-gray-700">Font Weight</label>
+                      <select value={formData.invoiceFormat?.fontWeight || 'normal'}
+                        onChange={handleNestedChange('invoiceFormat', 'fontWeight')}
+                        className="w-full px-4 py-2.5 border-2 border-gray-300 rounded-lg focus:border-amber-500 focus:ring-4 focus:ring-amber-100 transition-all text-sm sm:text-base">
+                        <option value="normal">Normal</option>
+                        <option value="bold">Bold</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="bg-white rounded-xl shadow-sm border-2 border-amber-200 p-4 sm:p-6 space-y-4">
+                    <h3 className="text-base sm:text-lg font-bold text-gray-900 mb-2">Content Display Options</h3>
+                    <p className="text-xs sm:text-sm text-gray-600 mb-4">When unchecked, the section heading will remain but content will be blank</p>
+                    
+                    <div className="space-y-3">
+                      <label className="flex items-start gap-2 cursor-pointer">
+                        <input type="checkbox" checked={formData.invoiceFormat?.showBankDetails !== false}
+                          onChange={handleNestedChange('invoiceFormat', 'showBankDetails')}
+                          className="w-4 h-4 text-amber-600 border-gray-300 rounded focus:ring-amber-500 mt-0.5" />
+                        <div>
+                          <strong className="text-sm font-semibold text-gray-700">Show Bank Details</strong>
+                          <span className="text-xs sm:text-sm text-gray-500 ml-2">(Account number, IFSC, PAN)</span>
+                        </div>
                       </label>
-                      <input
-                        id="stamp-upload"
-                        type="file"
-                        accept="image/*"
-                        onChange={handleImageUpload('stampImage')}
-                        style={{ display: 'none' }}
-                      />
+                      <label className="flex items-start gap-2 cursor-pointer">
+                        <input type="checkbox" checked={formData.invoiceFormat?.showTerms !== false}
+                          onChange={handleNestedChange('invoiceFormat', 'showTerms')}
+                          className="w-4 h-4 text-amber-600 border-gray-300 rounded focus:ring-amber-500 mt-0.5" />
+                        <div>
+                          <strong className="text-sm font-semibold text-gray-700">Show Terms & Conditions</strong>
+                          <span className="text-xs sm:text-sm text-gray-500 ml-2">(From Terms tab)</span>
+                        </div>
+                      </label>
                     </div>
-                  )}
+                  </div>
+
+                  <div className="bg-gradient-to-r from-green-50 to-emerald-50 border-l-4 border-green-500 p-3 sm:p-4 rounded-lg flex items-start gap-3">
+                    <Printer className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
+                    <div>
+                      <strong className="text-green-800 text-sm sm:text-base">Preview Tip:</strong>
+                      <p className="text-green-700 text-xs sm:text-sm mt-1">Print an invoice after saving to see how these settings affect the layout</p>
+                    </div>
+                  </div>
                 </div>
-              </div>
+              )}
 
-              <div className="form-group">
-                <label className="form-label">Signature Text</label>
-                <input
-                  type="text"
-                  name="signatureText"
-                  className="form-control"
-                  value={formData.signatureText}
-                  onChange={handleChange}
-                  placeholder="Authorized Signatory"
-                />
-                <small className="text-muted mt-1 block">Text that appears below the signature line</small>
-              </div>
-            </div>
+              {/* Tab: Challan Format */}
+              {activeTab === 'challan' && (
+                <div className="space-y-6">
+                  <div className="bg-white rounded-xl shadow-sm border-2 border-amber-200 p-4 sm:p-6 space-y-4">
+                    <h3 className="text-base sm:text-lg font-bold text-gray-900 mb-2">Challan Layout Settings</h3>
+                    <p className="text-xs sm:text-sm text-gray-600 mb-4">Configure how your delivery challans will appear when printed</p>
+                    
+                    <div className="space-y-2">
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" checked={formData.challanFormat?.showLogo !== false}
+                          onChange={handleNestedChange('challanFormat', 'showLogo')}
+                          className="w-4 h-4 text-amber-600 border-gray-300 rounded focus:ring-amber-500" />
+                        <strong className="text-sm font-semibold text-gray-700">Show Company Logo</strong>
+                      </label>
+                      <small className="block text-gray-500 ml-6 text-xs sm:text-sm">Logo will appear as a watermark in the background center of each challan</small>
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="block text-sm font-semibold text-gray-700">Print Color Mode</label>
+                      <select value={formData.challanFormat?.colorMode || 'color'}
+                        onChange={handleNestedChange('challanFormat', 'colorMode')}
+                        className="w-full px-4 py-2.5 border-2 border-gray-300 rounded-lg focus:border-amber-500 focus:ring-4 focus:ring-amber-100 transition-all text-sm sm:text-base">
+                        <option value="color">Color (Standard colors with backgrounds)</option>
+                        <option value="black_white">Black & White (All elements in black)</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="bg-white rounded-xl shadow-sm border-2 border-amber-200 p-4 sm:p-6 space-y-4">
+                    <h3 className="text-base sm:text-lg font-bold text-gray-900 mb-4">Typography Settings</h3>
+                    
+                    <div className="space-y-2">
+                      <label className="block text-sm font-semibold text-gray-700">Font Family</label>
+                      <select value={formData.challanFormat?.fontFamily || 'Segoe UI'}
+                        onChange={handleNestedChange('challanFormat', 'fontFamily')}
+                        className="w-full px-4 py-2.5 border-2 border-gray-300 rounded-lg focus:border-amber-500 focus:ring-4 focus:ring-amber-100 transition-all text-sm sm:text-base">
+                        <option value="Segoe UI">Segoe UI (Modern, Clean)</option>
+                        <option value="Arial">Arial (Classic, Universal)</option>
+                        <option value="Times New Roman">Times New Roman (Traditional, Formal)</option>
+                        <option value="Georgia">Georgia (Elegant, Serif)</option>
+                        <option value="Courier New">Courier New (Monospace)</option>
+                        <option value="Verdana">Verdana (Web-friendly)</option>
+                      </select>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                      {[
+                        { field: 'base', label: 'Base Font Size', min: 8, max: 16, hint: 'Regular text (8-16)' },
+                        { field: 'companyName', label: 'Company Name Size', min: 16, max: 32, hint: 'Header text (16-32)' },
+                        { field: 'heading', label: 'Heading Size', min: 10, max: 18, hint: 'Section headings (10-18)' }
+                      ].map(({ field, label, min, max, hint }) => (
+                        <div key={field} className="space-y-2">
+                          <label className="block text-sm font-semibold text-gray-700">{label} (px)</label>
+                          <input type="number" value={formData.challanFormat?.fontSize?.[field] || (field === 'companyName' ? 22 : field === 'heading' ? 12 : 11)}
+                            onChange={handleChallanFontSizeChange(field)} min={min} max={max}
+                            className="w-full px-4 py-2.5 border-2 border-gray-300 rounded-lg focus:border-amber-500 focus:ring-4 focus:ring-amber-100 transition-all text-sm sm:text-base" />
+                          <small className="block text-gray-500 text-xs">{hint}</small>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="block text-sm font-semibold text-gray-700">Font Weight</label>
+                      <select value={formData.challanFormat?.fontWeight || 'normal'}
+                        onChange={handleNestedChange('challanFormat', 'fontWeight')}
+                        className="w-full px-4 py-2.5 border-2 border-gray-300 rounded-lg focus:border-amber-500 focus:ring-4 focus:ring-amber-100 transition-all text-sm sm:text-base">
+                        <option value="normal">Normal</option>
+                        <option value="bold">Bold</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="bg-white rounded-xl shadow-sm border-2 border-amber-200 p-4 sm:p-6 space-y-4">
+                    <h3 className="text-base sm:text-lg font-bold text-gray-900 mb-4">Content Display Options</h3>
+                    
+                    <div className="space-y-3">
+                      {[
+                        { field: 'showGanthPress', label: 'Show Ganth Press Details', hint: '(Press name and address)' },
+                        { field: 'showBaleDetails', label: 'Show Bale Details Section', hint: '(Quality, Bale Number, Pieces count)' },
+                        { field: 'showWeights', label: 'Show Weight Column', hint: '(Weight in kg for each piece)' }
+                      ].map(({ field, label, hint }) => (
+                        <label key={field} className="flex items-start gap-2 cursor-pointer">
+                          <input type="checkbox" checked={formData.challanFormat?.[field] !== false}
+                            onChange={handleNestedChange('challanFormat', field)}
+                            className="w-4 h-4 text-amber-600 border-gray-300 rounded focus:ring-amber-500 mt-0.5" />
+                          <div>
+                            <strong className="text-sm font-semibold text-gray-700">{label}</strong>
+                            <span className="text-xs sm:text-sm text-gray-500 ml-2">{hint}</span>
+                          </div>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="bg-gradient-to-r from-green-50 to-emerald-50 border-l-4 border-green-500 p-3 sm:p-4 rounded-lg flex items-start gap-3">
+                    <Printer className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
+                    <div>
+                      <strong className="text-green-800 text-sm sm:text-base">Preview Tip:</strong>
+                      <p className="text-green-700 text-xs sm:text-sm mt-1">Print a challan after saving to see how these settings affect the layout</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Tab: Terms & Conditions */}
+              {activeTab === 'terms' && (
+                <div className="space-y-6">
+                  <div className="bg-white rounded-xl shadow-sm border-2 border-amber-200 p-4 sm:p-6 space-y-4">
+                    <h3 className="text-base sm:text-lg font-bold text-gray-900 mb-2">Invoice Terms & Conditions</h3>
+                    <p className="text-xs sm:text-sm text-gray-600 mb-4">These will appear at the bottom of tax invoices (Maximum 100 characters per line)</p>
+                    
+                    {[1, 2, 3, 4].map(num => (
+                      <div key={num} className="space-y-2">
+                        <label className="block text-sm font-semibold text-gray-700">Line {num}</label>
+                        <input type="text" value={formData.terms.invoice[`line${num}`]}
+                          onChange={handleTermsChange('invoice', `line${num}`)} maxLength="100"
+                          placeholder={
+                            num === 1 ? 'E.g., Payment due within 30 days' :
+                            num === 2 ? 'E.g., Goods once sold cannot be returned' :
+                            num === 3 ? 'E.g., Subject to jurisdiction' :
+                            'E.g., Interest charged on overdue payments'
+                          }
+                          className="w-full px-4 py-2.5 border-2 border-gray-300 rounded-lg focus:border-amber-500 focus:ring-4 focus:ring-amber-100 transition-all text-sm sm:text-base" />
+                        <small className="text-gray-500 text-xs sm:text-sm">{(formData.terms.invoice[`line${num}`] || '').length}/100</small>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="bg-white rounded-xl shadow-sm border-2 border-amber-200 p-4 sm:p-6 space-y-4">
+                    <h3 className="text-base sm:text-lg font-bold text-gray-900 mb-2">Challan Terms & Conditions</h3>
+                    <p className="text-xs sm:text-sm text-gray-600 mb-4">This will appear at the bottom of delivery challans (Maximum 150 characters)</p>
+                    
+                    <div className="space-y-2">
+                      <label className="block text-sm font-semibold text-gray-700">Terms</label>
+                      <textarea value={formData.terms.challan.line1} onChange={handleTermsChange('challan', 'line1')}
+                        maxLength="150" rows="3" placeholder="E.g., Any type of complaint regarding weight and folding will be entertained within 48Hrs."
+                        className="w-full px-4 py-2.5 border-2 border-gray-300 rounded-lg focus:border-amber-500 focus:ring-4 focus:ring-amber-100 resize-vertical min-h-[100px] transition-all text-sm sm:text-base" />
+                      <small className="text-gray-500 text-xs sm:text-sm">{(formData.terms.challan.line1 || '').length}/150 characters</small>
+                    </div>
+                  </div>
+
+                  <div className="bg-white rounded-xl shadow-sm border-2 border-amber-200 p-4 sm:p-6 space-y-4">
+                    <h3 className="text-base sm:text-lg font-bold text-gray-900 mb-4">Signature & Stamp</h3>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      {['signatureImage', 'stampImage'].map((field) => (
+                        <div key={field} className="space-y-3">
+                          <label className="block text-sm font-semibold text-gray-700">
+                            {field === 'signatureImage' ? 'Signature' : 'Stamp'} Image
+                          </label>
+                          {formData[field] ? (
+                            <div className="text-center space-y-3">
+                              <img src={formData[field]} alt={field === 'signatureImage' ? 'Signature' : 'Stamp'}
+                                className="max-w-[200px] max-h-[100px] border-2 border-gray-200 rounded mx-auto" />
+                              <button type="button" onClick={() => setFormData({ ...formData, [field]: '' })}
+                                className="inline-flex items-center gap-2 px-4 py-2 font-semibold rounded-lg bg-gradient-to-r from-red-500 to-rose-600 text-white hover:from-red-600 hover:to-rose-700 transition-all text-sm sm:text-base">
+                                <X className="w-4 h-4" />Remove
+                              </button>
+                            </div>
+                          ) : (
+                            <div>
+                              <label htmlFor={`${field}-upload`}
+                                className="inline-flex items-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3 font-semibold rounded-lg bg-gradient-to-r from-amber-500 to-orange-600 text-white hover:from-amber-600 hover:to-orange-700 transition-all cursor-pointer shadow-sm hover:shadow-md text-sm sm:text-base">
+                                <Upload className="w-4 sm:w-5 h-4 sm:h-5" />
+                                Upload {field === 'signatureImage' ? 'Signature' : 'Stamp'}
+                              </label>
+                              <input id={`${field}-upload`} type="file" accept="image/*"
+                                onChange={handleImageUpload(field)} className="hidden" />
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="block text-sm font-semibold text-gray-700">Signature Text</label>
+                      <input type="text" name="signatureText" value={formData.signatureText}
+                        onChange={handleChange} placeholder="Authorized Signatory"
+                        className="w-full px-4 py-2.5 border-2 border-gray-300 rounded-lg focus:border-amber-500 focus:ring-4 focus:ring-amber-100 transition-all text-sm sm:text-base" />
+                      <small className="block text-gray-500 mt-1 text-xs sm:text-sm">Text that appears below the signature line</small>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Tab: Preferences */}
+              {activeTab === 'preferences' && (
+                <div className="space-y-6">
+                  <div className="bg-white rounded-xl shadow-sm border-2 border-amber-200 p-4 sm:p-6 space-y-4">
+                    <h3 className="text-base sm:text-lg font-bold text-gray-900 mb-4">General Preferences</h3>
+                    
+                    <div className="space-y-2">
+                      <label className="block text-sm font-semibold text-gray-700">Default Tax Rate (%)</label>
+                      <input type="number" value={formData.preferences.defaultTaxRate}
+                        onChange={handleNestedChange('preferences', 'defaultTaxRate')} min="0" max="100" step="0.01"
+                        className="w-full px-4 py-2.5 border-2 border-gray-300 rounded-lg focus:border-amber-500 focus:ring-4 focus:ring-amber-100 transition-all text-sm sm:text-base" />
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="block text-sm font-semibold text-gray-700">Default Currency</label>
+                      <select value={formData.preferences.defaultCurrency}
+                        onChange={handleNestedChange('preferences', 'defaultCurrency')}
+                        className="w-full px-4 py-2.5 border-2 border-gray-300 rounded-lg focus:border-amber-500 focus:ring-4 focus:ring-amber-100 transition-all text-sm sm:text-base">
+                        <option value="INR">INR (₹)</option>
+                        <option value="USD">USD ($)</option>
+                        <option value="EUR">EUR (€)</option>
+                        <option value="GBP">GBP (£)</option>
+                      </select>
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="block text-sm font-semibold text-gray-700">Date Format</label>
+                      <select value={formData.preferences.dateFormat}
+                        onChange={handleNestedChange('preferences', 'dateFormat')}
+                        className="w-full px-4 py-2.5 border-2 border-gray-300 rounded-lg focus:border-amber-500 focus:ring-4 focus:ring-amber-100 transition-all text-sm sm:text-base">
+                        <option value="DD/MM/YYYY">DD/MM/YYYY (31/12/2024)</option>
+                        <option value="MM/DD/YYYY">MM/DD/YYYY (12/31/2024)</option>
+                        <option value="YYYY-MM-DD">YYYY-MM-DD (2024-12-31)</option>
+                      </select>
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="block text-sm font-semibold text-gray-700">Number Format</label>
+                      <select value={formData.preferences.numberFormat}
+                        onChange={handleNestedChange('preferences', 'numberFormat')}
+                        className="w-full px-4 py-2.5 border-2 border-gray-300 rounded-lg focus:border-amber-500 focus:ring-4 focus:ring-amber-100 transition-all text-sm sm:text-base">
+                        <option value="indian">Indian (1,00,000.00)</option>
+                        <option value="international">International (100,000.00)</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <button type="submit" 
+                className="w-full inline-flex items-center justify-center gap-2 px-6 py-3 font-semibold rounded-lg bg-gradient-to-r from-green-500 to-emerald-600 text-white hover:from-green-600 hover:to-emerald-700 transition-all shadow-sm hover:shadow-md text-sm sm:text-base">
+                <Save className="w-5 h-5" />
+                {exists ? 'Update Settings' : 'Save Settings'}
+              </button>
+            </form>
           </div>
-        )}
-
-        {/* Tab: Preferences */}
-        {activeTab === 'preferences' && (
-          <div className="tab-content">
-            <div className="card">
-              <div className="card-header">General Preferences</div>
-              
-              <div className="form-group">
-                <label className="form-label">Default Tax Rate (%)</label>
-                <input
-                  type="number"
-                  className="form-control"
-                  value={formData.preferences.defaultTaxRate}
-                  onChange={handleNestedChange('preferences', 'defaultTaxRate')}
-                  min="0"
-                  max="100"
-                  step="0.01"
-                />
-              </div>
-
-              <div className="form-group">
-                <label className="form-label">Default Currency</label>
-                <select
-                  className="form-control"
-                  value={formData.preferences.defaultCurrency}
-                  onChange={handleNestedChange('preferences', 'defaultCurrency')}
-                >
-                  <option value="INR">INR (₹)</option>
-                  <option value="USD">USD ($)</option>
-                  <option value="EUR">EUR (€)</option>
-                  <option value="GBP">GBP (£)</option>
-                </select>
-              </div>
-
-              <div className="form-group">
-                <label className="form-label">Date Format</label>
-                <select
-                  className="form-control"
-                  value={formData.preferences.dateFormat}
-                  onChange={handleNestedChange('preferences', 'dateFormat')}
-                >
-                  <option value="DD/MM/YYYY">DD/MM/YYYY (31/12/2024)</option>
-                  <option value="MM/DD/YYYY">MM/DD/YYYY (12/31/2024)</option>
-                  <option value="YYYY-MM-DD">YYYY-MM-DD (2024-12-31)</option>
-                </select>
-              </div>
-
-              <div className="form-group">
-                <label className="form-label">Number Format</label>
-                <select
-                  className="form-control"
-                  value={formData.preferences.numberFormat}
-                  onChange={handleNestedChange('preferences', 'numberFormat')}
-                >
-                  <option value="indian">Indian (1,00,000.00)</option>
-                  <option value="international">International (100,000.00)</option>
-                </select>
-              </div>
-            </div>
-          </div>
-        )}
-        
-        <button type="submit" className="btn btn-success mt-4 w-full">
-          {exists ? 'Update Settings' : 'Save Settings'}
-        </button>
-      </form>
+        </div>
+      </div>
     </div>
   );
 }

@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import '../App.css';
+import { Eye, EyeOff, LogIn, AlertCircle, CheckCircle } from 'lucide-react';
 
 function Login() {
   const navigate = useNavigate();
@@ -42,189 +42,118 @@ function Login() {
   };
 
   return (
-    <div style={{
-      minHeight: '100vh',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-      padding: '20px'
-    }}>
-      <div style={{
-        background: 'white',
-        borderRadius: '16px',
-        boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
-        padding: '3rem',
-        width: '100%',
-        maxWidth: '450px'
-      }}>
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-amber-50 via-orange-50 to-rose-50 px-4 py-12">
+      <div className="bg-white rounded-2xl shadow-xl border border-gray-200 w-full max-w-md p-8">
         {/* Header */}
-        <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
-          <div style={{
-            fontSize: '2.5rem',
-            fontWeight: 'bold',
-            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-            WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: 'transparent',
-            marginBottom: '0.5rem'
-          }}>
-            Welcome Back
+        <div className="text-center mb-8">
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gradient-to-br from-amber-100 to-orange-100 border-2 border-amber-200 mb-4">
+            <LogIn className="w-8 h-8 text-amber-600" />
           </div>
-          <p style={{ color: '#666', fontSize: '0.95rem' }}>
+          <h1 className="text-3xl font-bold bg-gradient-to-r from-amber-700 to-orange-600 bg-clip-text text-transparent mb-2">
+            Welcome Back
+          </h1>
+          <p className="text-gray-600">
             Sign in to your account to continue
           </p>
         </div>
 
         {/* Alert Message */}
         {message.text && (
-          <div className={`alert alert-${message.type}`} style={{
-            marginBottom: '1.5rem',
-            padding: '12px 16px',
-            borderRadius: '8px',
-            fontSize: '0.9rem'
-          }}>
-            {message.text}
+          <div className={`p-4 rounded-lg border-l-4 flex items-center gap-3 mb-6 ${
+            message.type === 'success' 
+              ? 'bg-gradient-to-r from-green-50 to-emerald-50 border-green-500 text-green-800'
+              : 'bg-gradient-to-r from-red-50 to-rose-50 border-red-500 text-red-800'
+          }`}>
+            {message.type === 'success' ? (
+              <CheckCircle className="w-5 h-5 flex-shrink-0" />
+            ) : (
+              <AlertCircle className="w-5 h-5 flex-shrink-0" />
+            )}
+            <span className="text-sm font-medium">{message.text}</span>
           </div>
         )}
 
         {/* Login Form */}
-        <form onSubmit={handleSubmit}>
-          <div className="form-group" style={{ marginBottom: '1.5rem' }}>
-            <label className="form-label" style={{ 
-              fontWeight: '600', 
-              marginBottom: '0.5rem',
-              display: 'block',
-              color: '#333'
-            }}>
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div className="space-y-2">
+            <label className="block text-sm font-semibold text-gray-700">
               Email Address
             </label>
             <input
               type="email"
               name="email"
-              className="form-control"
               value={formData.email}
               onChange={handleChange}
               placeholder="Enter your email"
               required
               disabled={loading}
-              style={{
-                padding: '12px 16px',
-                fontSize: '1rem',
-                borderRadius: '8px',
-                border: '2px solid #e0e0e0',
-                transition: 'all 0.3s'
-              }}
-              onFocus={(e) => e.target.style.borderColor = '#667eea'}
-              onBlur={(e) => e.target.style.borderColor = '#e0e0e0'}
+              className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-amber-500 focus:ring-4 focus:ring-amber-100 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             />
           </div>
 
-          <div className="form-group" style={{ marginBottom: '1.5rem' }}>
-            <label className="form-label" style={{ 
-              fontWeight: '600', 
-              marginBottom: '0.5rem',
-              display: 'block',
-              color: '#333'
-            }}>
+          <div className="space-y-2">
+            <label className="block text-sm font-semibold text-gray-700">
               Password
             </label>
-            <div style={{ position: 'relative' }}>
+            <div className="relative">
               <input
                 type={showPassword ? 'text' : 'password'}
                 name="password"
-                className="form-control"
                 value={formData.password}
                 onChange={handleChange}
                 placeholder="Enter your password"
                 required
                 disabled={loading}
-                style={{
-                  padding: '12px 16px',
-                  paddingRight: '45px',
-                  fontSize: '1rem',
-                  borderRadius: '8px',
-                  border: '2px solid #e0e0e0',
-                  transition: 'all 0.3s',
-                  width: '100%'
-                }}
-                onFocus={(e) => e.target.style.borderColor = '#667eea'}
-                onBlur={(e) => e.target.style.borderColor = '#e0e0e0'}
+                className="w-full px-4 py-3 pr-12 border-2 border-gray-300 rounded-lg focus:border-amber-500 focus:ring-4 focus:ring-amber-100 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                style={{
-                  position: 'absolute',
-                  right: '12px',
-                  top: '50%',
-                  transform: 'translateY(-50%)',
-                  background: 'none',
-                  border: 'none',
-                  cursor: 'pointer',
-                  padding: '4px',
-                  color: '#666'
-                }}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 transition-colors"
+                tabIndex={-1}
               >
-                {showPassword ? '👁️' : '👁️‍🗨️'}
+                {showPassword ? (
+                  <EyeOff className="w-5 h-5" />
+                ) : (
+                  <Eye className="w-5 h-5" />
+                )}
               </button>
             </div>
           </div>
 
           <button
             type="submit"
-            className="btn btn-primary"
             disabled={loading}
-            style={{
-              width: '100%',
-              padding: '14px',
-              fontSize: '1.05rem',
-              fontWeight: '600',
-              borderRadius: '8px',
-              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-              border: 'none',
-              cursor: loading ? 'not-allowed' : 'pointer',
-              opacity: loading ? 0.7 : 1,
-              transition: 'all 0.3s',
-              marginTop: '0.5rem'
-            }}
+            className="w-full inline-flex items-center justify-center gap-2 px-6 py-3 font-semibold rounded-lg bg-gradient-to-r from-amber-500 to-orange-600 text-white hover:from-amber-600 hover:to-orange-700 transition-all shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {loading ? (
-              <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}>
-                <div className="spinner" style={{ width: '16px', height: '16px' }}></div>
+              <>
+                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
                 Signing in...
-              </span>
+              </>
             ) : (
-              'Sign In'
+              <>
+                <LogIn className="w-5 h-5" />
+                Sign In
+              </>
             )}
           </button>
         </form>
 
         {/* Divider */}
-        <div style={{
-          margin: '2rem 0',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '10px',
-          color: '#999'
-        }}>
-          <div style={{ flex: 1, height: '1px', background: '#e0e0e0' }}></div>
-          <span style={{ fontSize: '0.85rem' }}>OR</span>
-          <div style={{ flex: 1, height: '1px', background: '#e0e0e0' }}></div>
+        <div className="flex items-center gap-4 my-8">
+          <div className="flex-1 h-px bg-gray-300"></div>
+          <span className="text-sm text-gray-500 font-medium">OR</span>
+          <div className="flex-1 h-px bg-gray-300"></div>
         </div>
 
         {/* Register Link */}
-        <div style={{ textAlign: 'center' }}>
-          <p style={{ color: '#666', fontSize: '0.95rem', margin: '0' }}>
+        <div className="text-center">
+          <p className="text-gray-600 text-sm">
             Don't have an account?{' '}
             <Link 
               to="/register" 
-              style={{ 
-                color: '#667eea', 
-                fontWeight: '600',
-                textDecoration: 'none'
-              }}
-              onMouseEnter={(e) => e.target.style.textDecoration = 'underline'}
-              onMouseLeave={(e) => e.target.style.textDecoration = 'none'}
+              className="font-semibold text-amber-600 hover:text-amber-700 transition-colors hover:underline"
             >
               Create Account
             </Link>
