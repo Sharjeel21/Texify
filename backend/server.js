@@ -19,6 +19,7 @@ const allowedOrigins = [
   'https://rqb7lw1w-3000.inc1.devtunnels.ms',
   'https://rqb7lw1w-5000.inc1.devtunnels.ms',
   'https://texify-sh.vercel.app',  // ✅ Your frontend Vercel URL
+  'https://texify-sh-git-main-sharjeels-projects-cddc3df4.vercel.app',
 ];
 
 // ============================================
