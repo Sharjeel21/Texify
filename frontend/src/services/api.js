@@ -2,14 +2,19 @@
 import axios from 'axios';
 
 const getAPIBaseURL = () => {
-  const hostname = window.location.hostname;
+  // 1️⃣ Use environment variable first (for production)
+  if (process.env.REACT_APP_API_URL) {
+    return process.env.REACT_APP_API_URL;
+  }
 
-  // 3️⃣ Localhost
+  // 2️⃣ Development fallback
+  const hostname = window.location.hostname;
+  
   if (hostname === 'localhost' || hostname === '127.0.0.1') {
     return 'http://localhost:5000/api';
   }
 
-  // 4️⃣ Fallback for LAN IP access (e.g. 192.168.x.x)
+  // 3️⃣ LAN IP fallback for local network testing
   return `http://${hostname}:5000/api`;
 };
 

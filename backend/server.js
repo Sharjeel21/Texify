@@ -19,6 +19,7 @@ const allowedOrigins = [
   'http://localhost:3000',
   'https://rqb7lw1w-3000.inc1.devtunnels.ms',
   'https://rqb7lw1w-5000.inc1.devtunnels.ms',
+  'https://texify-sh.vercel.app',
 ];
 
 app.use(cors({
