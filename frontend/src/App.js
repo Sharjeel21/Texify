@@ -1,20 +1,14 @@
-//frontend/src/app.js
+// frontend/src/App.js
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import './App.css';
 
-// Import Auth Context
 import { AuthProvider, useAuth } from './context/AuthContext';
-
-// Import Components
 import ProtectedRoute from './components/ProtectedRoute';
 import AppUI from './components/AppUI';
 
-// Import Auth Pages
 import Login from './pages/Login';
 import Register from './pages/Register';
-
-// Import App Pages
 import Dashboard from './pages/Dashboard';
 import QualityManagement from './pages/QualityManagement';
 import PartyManagement from './pages/PartyManagement';
@@ -28,26 +22,45 @@ import CompanySettings from './pages/CompanySettings';
 import PurchaseManagement from './pages/PurchaseManagement';
 import PurchaseDeliveries from './pages/PurchaseDeliveries';
 
-// Component to handle root redirect
+// ==========================================
+// Wrapper that injects user + logout into AppUI
+// ==========================================
+function AppLayout({ children }) {
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
+  };
+
+  return (
+    <AppUI user={user} logout={handleLogout}>
+      {children}
+    </AppUI>
+  );
+}
+
+// ==========================================
+// Root redirect
+// ==========================================
 function RootRedirect() {
   const { isAuthenticated, loading } = useAuth();
-  
+
   if (loading) {
     return (
-      <div style={{
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
-        height: '100vh'
-      }}>
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
         <div className="spinner"></div>
       </div>
     );
   }
-  
+
   return isAuthenticated ? <Navigate to="/dashboard" replace /> : <Navigate to="/login" replace />;
 }
 
+// ==========================================
+// App
+// ==========================================
 function App() {
   return (
     <AuthProvider>
@@ -56,84 +69,57 @@ function App() {
           {/* Public Routes */}
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
-          
-          {/* Root redirect */}
           <Route path="/" element={<RootRedirect />} />
-          
-          {/* Protected Routes - Wrapped in AppUI */}
+
+          {/* Protected Routes */}
           <Route path="/dashboard" element={
-            <ProtectedRoute>
-              <AppUI><Dashboard /></AppUI>
-            </ProtectedRoute>
+            <ProtectedRoute><AppLayout><Dashboard /></AppLayout></ProtectedRoute>
           } />
-          
+
           <Route path="/qualities" element={
-            <ProtectedRoute>
-              <AppUI><QualityManagement /></AppUI>
-            </ProtectedRoute>
+            <ProtectedRoute><AppLayout><QualityManagement /></AppLayout></ProtectedRoute>
           } />
-          
+
           <Route path="/parties" element={
-            <ProtectedRoute>
-              <AppUI><PartyManagement /></AppUI>
-            </ProtectedRoute>
+            <ProtectedRoute><AppLayout><PartyManagement /></AppLayout></ProtectedRoute>
           } />
-          
+
           <Route path="/deals" element={
-            <ProtectedRoute>
-              <AppUI><DealManagement /></AppUI>
-            </ProtectedRoute>
+            <ProtectedRoute><AppLayout><DealManagement /></AppLayout></ProtectedRoute>
           } />
-          
+
           <Route path="/delivery-challan" element={
-            <ProtectedRoute>
-              <AppUI><DeliveryChallan /></AppUI>
-            </ProtectedRoute>
+            <ProtectedRoute><AppLayout><DeliveryChallan /></AppLayout></ProtectedRoute>
           } />
-          
+
           <Route path="/delivery-challan/add-bales/:id" element={
-            <ProtectedRoute>
-              <AppUI><AddBales /></AppUI>
-            </ProtectedRoute>
+            <ProtectedRoute><AppLayout><AddBales /></AppLayout></ProtectedRoute>
           } />
-          
+
           <Route path="/tax-invoice" element={
-            <ProtectedRoute>
-              <AppUI><TaxInvoice /></AppUI>
-            </ProtectedRoute>
+            <ProtectedRoute><AppLayout><TaxInvoice /></AppLayout></ProtectedRoute>
           } />
-          
+
           <Route path="/view-challans" element={
-            <ProtectedRoute>
-              <AppUI><ViewChallans /></AppUI>
-            </ProtectedRoute>
+            <ProtectedRoute><AppLayout><ViewChallans /></AppLayout></ProtectedRoute>
           } />
-          
+
           <Route path="/view-invoices" element={
-            <ProtectedRoute>
-              <AppUI><ViewInvoices /></AppUI>
-            </ProtectedRoute>
+            <ProtectedRoute><AppLayout><ViewInvoices /></AppLayout></ProtectedRoute>
           } />
-          
+
           <Route path="/company-settings" element={
-            <ProtectedRoute>
-              <AppUI><CompanySettings /></AppUI>
-            </ProtectedRoute>
+            <ProtectedRoute><AppLayout><CompanySettings /></AppLayout></ProtectedRoute>
           } />
-          
+
           <Route path="/purchases" element={
-            <ProtectedRoute>
-              <AppUI><PurchaseManagement /></AppUI>
-            </ProtectedRoute>
+            <ProtectedRoute><AppLayout><PurchaseManagement /></AppLayout></ProtectedRoute>
           } />
-          
+
           <Route path="/purchase-deliveries" element={
-            <ProtectedRoute>
-              <AppUI><PurchaseDeliveries /></AppUI>
-            </ProtectedRoute>
+            <ProtectedRoute><AppLayout><PurchaseDeliveries /></AppLayout></ProtectedRoute>
           } />
-          
-          {/* Catch all - redirect to root */}
+
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Router>
