@@ -105,6 +105,12 @@ const verifyRelatedOwnership = (RelatedModel, fieldName) => {
         });
       }
       
+      // Attach related resource to request for route reuse
+      if (!req.relatedResources) {
+        req.relatedResources = {};
+      }
+      req.relatedResources[fieldName] = relatedResource;
+      
       next();
     } catch (error) {
       console.error('Related ownership verification error:', error);

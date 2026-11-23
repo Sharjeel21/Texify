@@ -1,15 +1,25 @@
 // frontend/src/components/ResponsiveTable.js
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { cn } from '../lib/utils';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 export function ResponsiveTable({ 
   columns, 
-  data, 
+  data = [], 
   onRowClick, 
   className = '',
   emptyMessage = "No data available",
-  loading = false 
+  loading = false,
+  pagination = true,
+  pageSize = 25
 }) {
+  const [currentPage, setCurrentPage] = useState(1);
+
+  // Reset page when dataset size changes (e.g. search/filter applied)
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [data?.length]);
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -18,7 +28,7 @@ export function ResponsiveTable({
     );
   }
 
-  if (data.length === 0) {
+  if (!data || data.length === 0) {
     return (
       <div className="text-center py-12 bg-white rounded-xl border-2 border-dashed border-gray-300">
         <p className="text-gray-500 text-lg">{emptyMessage}</p>
@@ -26,8 +36,14 @@ export function ResponsiveTable({
     );
   }
 
+  const shouldPaginate = pagination && data.length > pageSize;
+  const totalPages = shouldPaginate ? Math.ceil(data.length / pageSize) : 1;
+  const validPage = Math.min(Math.max(1, currentPage), totalPages);
+  const startIndex = shouldPaginate ? (validPage - 1) * pageSize : 0;
+  const currentData = shouldPaginate ? data.slice(startIndex, startIndex + pageSize) : data;
+
   return (
-    <>
+    <div className="space-y-4">
       {/* Desktop Table */}
       <div className="hidden md:block overflow-x-auto rounded-xl border-2 border-amber-200 shadow-sm">
         <table className={cn("w-full border-collapse", className)}>
@@ -45,7 +61,7 @@ export function ResponsiveTable({
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
-            {data.map((row, idx) => (
+            {currentData.map((row, idx) => (
               <tr 
                 key={idx}
                 onClick={() => onRowClick?.(row)}
@@ -68,7 +84,7 @@ export function ResponsiveTable({
 
       {/* Mobile Card List */}
       <div className="md:hidden space-y-4">
-        {data.map((row, idx) => (
+        {currentData.map((row, idx) => (
           <div
             key={idx}
             onClick={() => onRowClick?.(row)}
@@ -93,7 +109,41 @@ export function ResponsiveTable({
           </div>
         ))}
       </div>
-    </>
+
+      {/* Pagination Controls */}
+      {shouldPaginate && (
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-4 py-3 bg-white rounded-xl border border-amber-200 text-sm text-gray-600 shadow-sm">
+          <div>
+            Showing <span className="font-semibold text-gray-900">{startIndex + 1}</span> to{' '}
+            <span className="font-semibold text-gray-900">
+              {Math.min(startIndex + pageSize, data.length)}
+            </span>{' '}
+            of <span className="font-semibold text-gray-900">{data.length}</span> results
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+              disabled={validPage === 1}
+              className="inline-flex items-center px-3 py-1.5 rounded-lg border border-amber-300 text-amber-900 font-medium hover:bg-amber-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            >
+              <ChevronLeft className="w-4 h-4 mr-1" />
+              Prev
+            </button>
+            <span className="px-2 font-medium text-gray-700">
+              {validPage} / {totalPages}
+            </span>
+            <button
+              onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+              disabled={validPage === totalPages}
+              className="inline-flex items-center px-3 py-1.5 rounded-lg border border-amber-300 text-amber-900 font-medium hover:bg-amber-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            >
+              Next
+              <ChevronRight className="w-4 h-4 ml-1" />
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
 

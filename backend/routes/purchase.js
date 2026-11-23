@@ -21,7 +21,8 @@ router.get('/', authenticate, async (req, res) => {
   try {
     const purchases = await Purchase.find({ user: req.userId })
       .populate('party')
-      .sort({ purchaseDate: -1 });
+      .sort({ purchaseDate: -1 })
+      .lean();
     res.json(purchases);
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -34,7 +35,7 @@ router.get('/:id', authenticate, verifyOwnership(Purchase), async (req, res) => 
     const purchase = await Purchase.findOne({ 
       _id: req.params.id,
       user: req.userId 
-    }).populate('party');
+    }).populate('party').lean();
     
     if (!purchase) {
       return res.status(404).json({ message: 'Purchase not found' });
@@ -53,7 +54,7 @@ router.post('/',
   verifyRelatedOwnership(Party, 'party'),
   async (req, res) => {
     try {
-      const partyDoc = await Party.findOne({ 
+      const partyDoc = req.relatedResources?.party || await Party.findOne({ 
         _id: req.body.party,
         user: req.userId 
       });
@@ -64,7 +65,9 @@ router.post('/',
 
       // Get next purchase number for this user
       const lastPurchase = await Purchase.findOne({ user: req.userId })
-        .sort({ purchaseNumber: -1 });
+        .select('purchaseNumber')
+        .sort({ purchaseNumber: -1 })
+        .lean();
       const nextPurchaseNumber = lastPurchase ? lastPurchase.purchaseNumber + 1 : 1;
 
       const purchase = new Purchase({
@@ -78,7 +81,8 @@ router.post('/',
 
       const savedPurchase = await purchase.save();
       const populatedPurchase = await Purchase.findById(savedPurchase._id)
-        .populate('party');
+        .populate('party')
+        .lean();
       
       console.log(`✅ Purchase created: ${purchase.purchaseNumber} by user ${req.userId}`);
       res.status(201).json(populatedPurchase);
@@ -95,7 +99,7 @@ router.put('/:id',
   verifyOwnership(Purchase),
   async (req, res) => {
     try {
-      const purchase = await Purchase.findOne({ 
+      const purchase = req.resource || await Purchase.findOne({ 
         _id: req.params.id,
         user: req.userId 
       });

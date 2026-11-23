@@ -54,7 +54,8 @@ router.post('/gst/verify', async (req, res) => {
 router.get('/', authenticate, async (req, res) => {
   try {
     const parties = await Party.find({ user: req.userId })
-      .sort({ createdAt: -1 });
+      .sort({ createdAt: -1 })
+      .lean();
     res.json(parties);
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -64,10 +65,10 @@ router.get('/', authenticate, async (req, res) => {
 // Get single party
 router.get('/:id', authenticate, verifyOwnership(Party), async (req, res) => {
   try {
-    const party = await Party.findOne({ 
+    const party = req.resource || await Party.findOne({ 
       _id: req.params.id,
       user: req.userId 
-    });
+    }).lean();
     
     if (!party) {
       return res.status(404).json({ message: 'Party not found' });
@@ -119,7 +120,7 @@ router.put('/:id',
   verifyOwnership(Party),
   async (req, res) => {
     try {
-      const party = await Party.findOne({ 
+      const party = req.resource || await Party.findOne({ 
         _id: req.params.id,
         user: req.userId 
       });

@@ -593,4 +593,6 @@ companySettingsSchema.pre('save', function(next) {
   next();
 });
 
+companySettingsSchema.index({ user: 1 }, { unique: true });
+
 module.exports = mongoose.model('CompanySettings', companySettingsSchema);

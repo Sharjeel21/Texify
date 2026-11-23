@@ -38,5 +38,6 @@ const partySchema = new mongoose.Schema({
 
 // Compound index for uniqueness per user
 partySchema.index({ user: 1, gstNumber: 1 }, { unique: true });
+partySchema.index({ user: 1, createdAt: -1 });
 
 module.exports = mongoose.model('Party', partySchema);

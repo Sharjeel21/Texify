@@ -25,6 +25,7 @@ console.log('API Base URL:', API_URL);
 // ✅ Axios instance
 const api = axios.create({
   baseURL: API_URL,
+  timeout: 45000, // 45 seconds to accommodate free tier cold starts
   headers: {
     'Content-Type': 'application/json',
   },
@@ -48,11 +49,27 @@ api.interceptors.request.use(
 );
 
 // ============================================
-// Response Interceptor - Handle Auth Errors
+// Response Interceptor - Handle Auth & Cold-Start Retries
 // ============================================
 api.interceptors.response.use(
   (response) => response,
-  (error) => {
+  async (error) => {
+    const config = error.config;
+    
+    // Auto-retry once for idempotent GET requests on Render cold-start gateway errors (502, 503, 504)
+    if (
+      config &&
+      config.method === 'get' &&
+      !config.__isRetry &&
+      error.response &&
+      [502, 503, 504].includes(error.response.status)
+    ) {
+      config.__isRetry = true;
+      console.log('🔄 Render cold start detected, retrying request in 2.5s...');
+      await new Promise(resolve => setTimeout(resolve, 2500));
+      return api(config);
+    }
+
     if (error.response?.status === 401) {
       // Token expired or invalid
       localStorage.removeItem('token');
@@ -136,9 +153,17 @@ export const deliveryChallanAPI = {
 };
 
 // ============================================
+// Dashboard APIs
+// ============================================
+export const dashboardAPI = {
+  getStats: () => api.get('/dashboard/stats'),
+};
+
+// ============================================
 // Stock APIs
 // ============================================
 export const stockAPI = {
+  getAll: () => api.get('/stock'),
   getByQuality: (qualityId) => api.get(`/stock/${qualityId}`),
 };
 

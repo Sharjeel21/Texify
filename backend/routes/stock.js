@@ -13,29 +13,18 @@ const { verifyRelatedOwnership } = require('../middleware/dataAccess');
 // Get stock by quality (user's own stock only)
 router.get('/:qualityId', 
   authenticate,
-  verifyRelatedOwnership(Quality, 'qualityId'),
   async (req, res) => {
     try {
-      // Verify quality belongs to user
-      const quality = await Quality.findOne({ 
-        _id: req.params.qualityId,
-        user: req.userId 
-      });
-      
-      if (!quality) {
-        return res.status(404).json({ message: 'Quality not found' });
-      }
-      
       // Get unsold challans for this quality (user's own only)
       const challans = await DeliveryChallan.find({ 
-        user: req.userId, // CRITICAL: Filter by user
+        user: req.userId,
         quality: req.params.qualityId,
         isSold: false 
-      }).populate('quality');
+      }).lean();
 
       // Flatten bales into stock items
       const stock = challans.flatMap(challan => 
-        challan.bales.map(bale => ({
+        (challan.bales || []).map(bale => ({
           challanId: challan._id,
           challanNumber: challan.challanNumber,
           baleNumber: bale.baleNumber,
@@ -56,46 +45,45 @@ router.get('/:qualityId',
 // Get overall stock summary (all qualities for user)
 router.get('/', authenticate, async (req, res) => {
   try {
-    // Get all user's qualities
-    const qualities = await Quality.find({ user: req.userId });
-    
-    const stockSummary = [];
-    
-    for (const quality of qualities) {
-      // Get unsold challans for this quality
-      const challans = await DeliveryChallan.find({ 
-        user: req.userId,
-        quality: quality._id,
-        isSold: false 
-      });
+    const challans = await DeliveryChallan.find({ 
+      user: req.userId,
+      isSold: false 
+    }).populate('quality', 'name hsnCode').lean();
 
-      let totalBales = 0;
-      let totalPieces = 0;
-      let totalMeters = 0;
-      let totalWeight = 0;
+    const summaryMap = new Map();
 
-      challans.forEach(challan => {
-        totalBales += challan.bales.length;
-        challan.bales.forEach(bale => {
-          totalPieces += bale.numberOfPieces;
-          totalMeters += bale.totalMeter;
-          totalWeight += bale.totalWeight;
-        });
-      });
+    for (const challan of challans) {
+      if (!challan.bales || challan.bales.length === 0 || !challan.quality) continue;
 
-      if (totalBales > 0) {
-        stockSummary.push({
-          qualityId: quality._id,
-          qualityName: quality.name,
-          hsnCode: quality.hsnCode,
-          totalBales,
-          totalPieces,
-          totalMeters: parseFloat(totalMeters.toFixed(2)),
-          totalWeight: parseFloat(totalWeight.toFixed(2)),
-          challansCount: challans.length
+      const qId = challan.quality._id.toString();
+      if (!summaryMap.has(qId)) {
+        summaryMap.set(qId, {
+          qualityId: challan.quality._id,
+          qualityName: challan.quality.name || challan.qualityName,
+          hsnCode: challan.quality.hsnCode || '',
+          totalBales: 0,
+          totalPieces: 0,
+          totalMeters: 0,
+          totalWeight: 0,
+          challansCount: 0
         });
       }
+
+      const item = summaryMap.get(qId);
+      item.challansCount += 1;
+      item.totalBales += challan.bales.length;
+      for (const bale of challan.bales) {
+        item.totalPieces += (bale.numberOfPieces || 0);
+        item.totalMeters += (bale.totalMeter || 0);
+        item.totalWeight += (bale.totalWeight || 0);
+      }
     }
+
+    const stockSummary = Array.from(summaryMap.values()).map(item => ({
+      ...item,
+      totalMeters: parseFloat(item.totalMeters.toFixed(2)),
+      totalWeight: parseFloat(item.totalWeight.toFixed(2))
+    }));
 
     res.json(stockSummary);
   } catch (error) {

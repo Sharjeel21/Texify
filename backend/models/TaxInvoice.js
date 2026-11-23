@@ -91,6 +91,7 @@ const taxInvoiceSchema = new mongoose.Schema({
 
 // COMPOUND INDICES
 taxInvoiceSchema.index({ user: 1, billNumber: 1 }, { unique: true });
+taxInvoiceSchema.index({ user: 1, createdAt: -1 });
 taxInvoiceSchema.index({ user: 1, party: 1, date: -1 });
 taxInvoiceSchema.index({ user: 1, dealId: 1 });
 

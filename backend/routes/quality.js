@@ -17,7 +17,8 @@ const {
 router.get('/', authenticate, async (req, res) => {
   try {
     const qualities = await Quality.find({ user: req.userId })
-      .sort({ createdAt: -1 });
+      .sort({ createdAt: -1 })
+      .lean();
     res.json(qualities);
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -27,10 +28,10 @@ router.get('/', authenticate, async (req, res) => {
 // Get single quality by ID
 router.get('/:id', authenticate, verifyOwnership(Quality), async (req, res) => {
   try {
-    const quality = await Quality.findOne({ 
+    const quality = req.resource || await Quality.findOne({ 
       _id: req.params.id,
       user: req.userId 
-    });
+    }).lean();
     
     if (!quality) {
       return res.status(404).json({ message: 'Quality not found' });
@@ -66,7 +67,7 @@ router.put('/:id',
   verifyOwnership(Quality),
   async (req, res) => {
     try {
-      const quality = await Quality.findOne({ 
+      const quality = req.resource || await Quality.findOne({ 
         _id: req.params.id,
         user: req.userId 
       });

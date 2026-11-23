@@ -107,5 +107,9 @@ deliveryChallanSchema.pre('save', function(next) {
 
 // Compound index: Challan Number unique per user
 deliveryChallanSchema.index({ user: 1, challanNumber: 1 }, { unique: true });
+deliveryChallanSchema.index({ user: 1, createdAt: -1 });
+deliveryChallanSchema.index({ user: 1, quality: 1, status: 1, isSold: 1 });
+deliveryChallanSchema.index({ user: 1, isSold: 1 });
+deliveryChallanSchema.index({ user: 1, status: 1 });
 
 module.exports = mongoose.model('DeliveryChallan', deliveryChallanSchema);

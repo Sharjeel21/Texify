@@ -27,7 +27,9 @@ const formatNumber = (num) => {
 router.get('/next-bill-number', authenticate, async (req, res) => {
   try {
     const lastInvoice = await TaxInvoice.findOne({ user: req.userId })
-      .sort({ billNumber: -1 });
+      .select('billNumber')
+      .sort({ billNumber: -1 })
+      .lean();
     const nextBillNumber = lastInvoice ? lastInvoice.billNumber + 1 : 1;
     res.json({ nextBillNumber });
   } catch (error) {
@@ -42,37 +44,58 @@ router.get('/', authenticate, async (req, res) => {
       .populate('party')
       .populate('quality')
       .populate('dealId')
-      .sort({ createdAt: -1 });
+      .sort({ createdAt: -1 })
+      .lean();
     
-    const invoicesWithBales = [];
-    
-    for (let invoice of invoices) {
-      const invoiceObj = invoice.toObject();
-      
-      if (invoiceObj.challanDetails && invoiceObj.challanDetails.length > 0) {
-        for (let i = 0; i < invoiceObj.challanDetails.length; i++) {
-          const challanDetail = invoiceObj.challanDetails[i];
-          // CRITICAL: Only fetch user's own challans
-          const challan = await DeliveryChallan.findOne({ 
-            _id: challanDetail.challanId,
-            user: req.userId 
-          });
-          
-          if (challan && challan.bales) {
-            invoiceObj.challanDetails[i].bales = challan.bales.map(bale => ({
+    // Check if any invoice challans are missing embedded bales (legacy records)
+    const missingChallanIds = new Set();
+    for (const invoice of invoices) {
+      if (invoice.challanDetails && invoice.challanDetails.length > 0) {
+        for (const cd of invoice.challanDetails) {
+          if ((!cd.bales || cd.bales.length === 0) && cd.challanId) {
+            missingChallanIds.add(cd.challanId.toString());
+          }
+        }
+      }
+    }
+
+    // Batch fetch any missing challans in a single query
+    const fallbackChallanMap = new Map();
+    if (missingChallanIds.size > 0) {
+      const fallbackChallans = await DeliveryChallan.find({
+        _id: { $in: Array.from(missingChallanIds) },
+        user: req.userId
+      }).select('_id bales').lean();
+
+      for (const ch of fallbackChallans) {
+        fallbackChallanMap.set(ch._id.toString(), ch.bales || []);
+      }
+    }
+
+    // Format bales identically to preserve contract
+    for (const invoice of invoices) {
+      if (invoice.challanDetails && invoice.challanDetails.length > 0) {
+        for (let i = 0; i < invoice.challanDetails.length; i++) {
+          const cd = invoice.challanDetails[i];
+          let bales = cd.bales;
+          if ((!bales || bales.length === 0) && cd.challanId) {
+            bales = fallbackChallanMap.get(cd.challanId.toString());
+          }
+          if (bales && bales.length > 0) {
+            invoice.challanDetails[i].bales = bales.map(bale => ({
               baleNumber: bale.baleNumber,
               numberOfPieces: bale.numberOfPieces,
               totalMeter: formatNumber(bale.totalMeter),
               totalWeight: formatNumber(bale.totalWeight)
             }));
+          } else {
+            invoice.challanDetails[i].bales = [];
           }
         }
       }
-      
-      invoicesWithBales.push(invoiceObj);
     }
     
-    res.json(invoicesWithBales);
+    res.json(invoices);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -87,35 +110,53 @@ router.get('/:id', authenticate, verifyOwnership(TaxInvoice), async (req, res) =
     })
       .populate('party')
       .populate('quality')
-      .populate('dealId');
+      .populate('dealId')
+      .lean();
     
     if (!invoice) {
       return res.status(404).json({ message: 'Invoice not found' });
     }
 
-    const invoiceObj = invoice.toObject();
-    
-    // Fetch bale details for each challan (user's own only)
-    if (invoiceObj.challanDetails && invoiceObj.challanDetails.length > 0) {
-      for (let i = 0; i < invoiceObj.challanDetails.length; i++) {
-        const challanDetail = invoiceObj.challanDetails[i];
-        const challan = await DeliveryChallan.findOne({ 
-          _id: challanDetail.challanId,
-          user: req.userId 
-        });
-        
-        if (challan && challan.bales) {
-          invoiceObj.challanDetails[i].bales = challan.bales.map(bale => ({
+    if (invoice.challanDetails && invoice.challanDetails.length > 0) {
+      const missingChallanIds = [];
+      for (const cd of invoice.challanDetails) {
+        if ((!cd.bales || cd.bales.length === 0) && cd.challanId) {
+          missingChallanIds.push(cd.challanId);
+        }
+      }
+
+      const fallbackChallanMap = new Map();
+      if (missingChallanIds.length > 0) {
+        const fallbackChallans = await DeliveryChallan.find({
+          _id: { $in: missingChallanIds },
+          user: req.userId
+        }).select('_id bales').lean();
+
+        for (const ch of fallbackChallans) {
+          fallbackChallanMap.set(ch._id.toString(), ch.bales || []);
+        }
+      }
+
+      for (let i = 0; i < invoice.challanDetails.length; i++) {
+        const cd = invoice.challanDetails[i];
+        let bales = cd.bales;
+        if ((!bales || bales.length === 0) && cd.challanId) {
+          bales = fallbackChallanMap.get(cd.challanId.toString());
+        }
+        if (bales && bales.length > 0) {
+          invoice.challanDetails[i].bales = bales.map(bale => ({
             baleNumber: bale.baleNumber,
             numberOfPieces: bale.numberOfPieces,
             totalMeter: formatNumber(bale.totalMeter),
             totalWeight: formatNumber(bale.totalWeight)
           }));
+        } else {
+          invoice.challanDetails[i].bales = [];
         }
       }
     }
     
-    res.json(invoiceObj);
+    res.json(invoice);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

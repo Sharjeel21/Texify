@@ -120,5 +120,7 @@ purchaseSchema.pre('save', function(next) {
 
 // Compound index for uniqueness per user
 purchaseSchema.index({ user: 1, purchaseNumber: 1 }, { unique: true });
+purchaseSchema.index({ user: 1, purchaseDate: -1 });
+purchaseSchema.index({ user: 1, status: 1 });
 
 module.exports = mongoose.model('Purchase', purchaseSchema);

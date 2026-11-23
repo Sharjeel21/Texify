@@ -146,5 +146,7 @@ purchaseDeliverySchema.pre('save', function(next) {
 
 // Index to find deliveries by user
 purchaseDeliverySchema.index({ user: 1, deliveryNumber: 1 });
+purchaseDeliverySchema.index({ user: 1, deliveryDate: -1 });
+purchaseDeliverySchema.index({ user: 1, purchase: 1 });
 
 module.exports = mongoose.model('PurchaseDelivery', purchaseDeliverySchema);

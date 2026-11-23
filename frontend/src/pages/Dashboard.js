@@ -14,12 +14,7 @@ import {
   CheckCircle
 } from 'lucide-react';
 import { 
-  deliveryChallanAPI, 
-  taxInvoiceAPI, 
-  qualityAPI, 
-  partyAPI, 
-  dealAPI,
-  purchaseAPI 
+  dashboardAPI 
 } from '../services/api';
 
 function Dashboard() {
@@ -42,52 +37,19 @@ function Dashboard() {
 
   const fetchDashboardData = async () => {
     try {
-      const [
-        challansRes, 
-        invoicesRes, 
-        qualitiesRes, 
-        partiesRes,
-        dealsRes,
-        purchasesRes
-      ] = await Promise.all([
-        deliveryChallanAPI.getAll(),
-        taxInvoiceAPI.getAll(),
-        qualityAPI.getAll(),
-        partyAPI.getAll(),
-        dealAPI.getActive(),
-        purchaseAPI.getAll()
-      ]);
-
-      const challans = challansRes.data;
-      const incompleteCnt = challans.filter(c => c.status === 'incomplete').length;
-      
-      const recentActivity = [
-        ...challans.slice(0, 3).map(c => ({
-          type: 'challan',
-          title: `Challan ${c.challanNumber}`,
-          subtitle: `${c.qualityName} - ${c.status}`,
-          date: c.createdAt,
-          status: c.status
-        })),
-        ...invoicesRes.data.slice(0, 2).map(i => ({
-          type: 'invoice',
-          title: `Invoice ${i.billNumber}`,
-          subtitle: `${i.partyDetails?.name}`,
-          date: i.date,
-          status: 'complete'
-        }))
-      ].sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 5);
-
-      setStats({
-        totalChallans: challans.length,
-        incompleteChallans: incompleteCnt,
-        totalInvoices: invoicesRes.data.length,
-        totalQualities: qualitiesRes.data.length,
-        totalParties: partiesRes.data.length,
-        activeDeals: dealsRes.data.length,
-        activePurchases: purchasesRes.data.filter(p => p.status !== 'completed').length,
-        recentActivity
-      });
+      const response = await dashboardAPI.getStats();
+      if (response.data) {
+        setStats({
+          totalChallans: response.data.totalChallans || 0,
+          incompleteChallans: response.data.incompleteChallans || 0,
+          totalInvoices: response.data.totalInvoices || 0,
+          totalQualities: response.data.totalQualities || 0,
+          totalParties: response.data.totalParties || 0,
+          activeDeals: response.data.activeDeals || 0,
+          activePurchases: response.data.activePurchases || 0,
+          recentActivity: response.data.recentActivity || []
+        });
+      }
       setLoading(false);
     } catch (error) {
       console.error('Error fetching dashboard data:', error);

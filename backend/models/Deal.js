@@ -121,6 +121,8 @@ dealSchema.set('toObject', { virtuals: true });
 
 // COMPOUND INDICES
 dealSchema.index({ user: 1, dealNumber: 1 }, { unique: true });
+dealSchema.index({ user: 1, createdAt: -1 });
+dealSchema.index({ user: 1, status: 1, createdAt: -1 });
 dealSchema.index({ user: 1, party: 1, status: 1 });
 dealSchema.index({ user: 1, quality: 1, status: 1 });
 

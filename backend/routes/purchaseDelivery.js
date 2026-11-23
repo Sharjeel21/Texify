@@ -23,7 +23,8 @@ router.get('/', authenticate, async (req, res) => {
         path: 'purchase', 
         populate: { path: 'party' } 
       })
-      .sort({ deliveryDate: -1 });
+      .sort({ deliveryDate: -1 })
+      .lean();
     res.json(deliveries);
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -44,7 +45,8 @@ router.get('/by-purchase/:purchaseId',
           path: 'purchase', 
           populate: { path: 'party' } 
         })
-        .sort({ deliveryDate: -1 });
+        .sort({ deliveryDate: -1 })
+        .lean();
       res.json(deliveries);
     } catch (error) {
       res.status(500).json({ message: error.message });
@@ -62,7 +64,8 @@ router.get('/:id', authenticate, verifyOwnership(PurchaseDelivery), async (req, 
       .populate({ 
         path: 'purchase', 
         populate: { path: 'party' } 
-      });
+      })
+      .lean();
     
     if (!delivery) {
       return res.status(404).json({ message: 'Delivery not found' });
@@ -83,7 +86,7 @@ router.post('/',
     try {
       const { purchase: purchaseId, actualWeight, deductFromDeal, deliveryDate } = req.body;
       
-      const purchase = await Purchase.findOne({ 
+      const purchase = req.relatedResources?.purchase || await Purchase.findOne({ 
         _id: purchaseId,
         user: req.userId 
       });
@@ -166,7 +169,7 @@ router.put('/:id/payment',
     try {
       const { amount, paymentMethod, chequeNumber, chequeDate, bankName, transactionId, notes, paymentDate } = req.body;
       
-      const delivery = await PurchaseDelivery.findOne({ 
+      const delivery = req.resource || await PurchaseDelivery.findOne({ 
         _id: req.params.id,
         user: req.userId 
       });
@@ -240,7 +243,7 @@ router.delete('/:id',
   verifyOwnership(PurchaseDelivery),
   async (req, res) => {
     try {
-      const delivery = await PurchaseDelivery.findOne({ 
+      const delivery = req.resource || await PurchaseDelivery.findOne({ 
         _id: req.params.id,
         user: req.userId 
       });

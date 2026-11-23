@@ -20,7 +20,10 @@ const {
 // Get next deal number (for current user)
 router.get('/next-deal-number', authenticate, async (req, res) => {
   try {
-    const lastDeal = await Deal.findOne({ user: req.userId }).sort({ dealNumber: -1 });
+    const lastDeal = await Deal.findOne({ user: req.userId })
+      .select('dealNumber')
+      .sort({ dealNumber: -1 })
+      .lean();
     const nextDealNumber = lastDeal ? lastDeal.dealNumber + 1 : 1;
     res.json({ nextDealNumber });
   } catch (error) {
@@ -41,7 +44,8 @@ router.get('/', authenticate, async (req, res) => {
     const deals = await Deal.find(filter)
       .populate('party')
       .populate('quality')
-      .sort({ createdAt: -1 });
+      .sort({ createdAt: -1 })
+      .lean();
     
     res.json(deals);
   } catch (error) {
@@ -58,7 +62,8 @@ router.get('/active', authenticate, async (req, res) => {
     })
       .populate('party')
       .populate('quality')
-      .sort({ createdAt: -1 });
+      .sort({ createdAt: -1 })
+      .lean();
     
     res.json(deals);
   } catch (error) {
@@ -76,7 +81,8 @@ router.get('/:id', authenticate, verifyOwnership(Deal), async (req, res) => {
       .populate('party')
       .populate('quality')
       .populate('challanIds')
-      .populate('invoiceIds');
+      .populate('invoiceIds')
+      .lean();
     
     if (!deal) {
       return res.status(404).json({ message: 'Deal not found' });
@@ -91,7 +97,7 @@ router.get('/:id', authenticate, verifyOwnership(Deal), async (req, res) => {
 // Get available challans for a deal
 router.get('/:id/available-challans', authenticate, verifyOwnership(Deal), async (req, res) => {
   try {
-    const deal = await Deal.findOne({ 
+    const deal = req.resource || await Deal.findOne({ 
       _id: req.params.id,
       user: req.userId 
     });
@@ -107,7 +113,7 @@ router.get('/:id/available-challans', authenticate, verifyOwnership(Deal), async
       quality: deal.quality,
       status: 'complete',
       isSold: false
-    }).sort({ createdAt: -1 });
+    }).sort({ createdAt: -1 }).lean();
     
     res.json(challans);
   } catch (error) {
@@ -140,16 +146,19 @@ router.post('/',
         return res.status(400).json({ message: 'Total bilties must be at least 1' });
       }
       
-      // Fetch party and quality details (already verified to belong to user)
-      const partyDoc = await Party.findOne({ _id: party, user: req.userId });
-      const qualityDoc = await Quality.findOne({ _id: quality, user: req.userId });
+      // Fetch party and quality details (reuse from related ownership verification if available)
+      const partyDoc = req.relatedResources?.party || await Party.findOne({ _id: party, user: req.userId });
+      const qualityDoc = req.relatedResources?.quality || await Quality.findOne({ _id: quality, user: req.userId });
       
       if (!partyDoc || !qualityDoc) {
         return res.status(404).json({ message: 'Party or Quality not found' });
       }
       
       // Get next deal number for this user
-      const lastDeal = await Deal.findOne({ user: req.userId }).sort({ dealNumber: -1 });
+      const lastDeal = await Deal.findOne({ user: req.userId })
+        .select('dealNumber')
+        .sort({ dealNumber: -1 })
+        .lean();
       const dealNumber = lastDeal ? lastDeal.dealNumber + 1 : 1;
       
       // Create deal
@@ -180,7 +189,8 @@ router.post('/',
       
       const populatedDeal = await Deal.findById(savedDeal._id)
         .populate('party')
-        .populate('quality');
+        .populate('quality')
+        .lean();
       
       res.status(201).json(populatedDeal);
     } catch (error) {
@@ -196,7 +206,7 @@ router.put('/:id',
   verifyOwnership(Deal),
   async (req, res) => {
     try {
-      const deal = await Deal.findOne({ 
+      const deal = req.resource || await Deal.findOne({ 
         _id: req.params.id,
         user: req.userId 
       });
@@ -236,7 +246,8 @@ router.put('/:id',
       
       const populatedDeal = await Deal.findById(updatedDeal._id)
         .populate('party')
-        .populate('quality');
+        .populate('quality')
+        .lean();
       
       res.json(populatedDeal);
     } catch (error) {
@@ -253,7 +264,7 @@ router.post('/:id/link-challan',
     try {
       const { challanId } = req.body;
       
-      const deal = await Deal.findOne({ 
+      const deal = req.resource || await Deal.findOne({ 
         _id: req.params.id,
         user: req.userId 
       });
@@ -297,7 +308,8 @@ router.post('/:id/link-challan',
       
       const populatedDeal = await Deal.findById(deal._id)
         .populate('party')
-        .populate('quality');
+        .populate('quality')
+        .lean();
       
       res.json(populatedDeal);
     } catch (error) {
@@ -312,7 +324,7 @@ router.delete('/:id',
   verifyOwnership(Deal),
   async (req, res) => {
     try {
-      const deal = await Deal.findOne({ 
+      const deal = req.resource || await Deal.findOne({ 
         _id: req.params.id,
         user: req.userId 
       });

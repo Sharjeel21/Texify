@@ -60,5 +60,6 @@ const qualitySchema = new mongoose.Schema({
 
 // Compound index for uniqueness per user
 qualitySchema.index({ user: 1, name: 1 }, { unique: true });
+qualitySchema.index({ user: 1, createdAt: -1 });
 
 module.exports = mongoose.model('Quality', qualitySchema);

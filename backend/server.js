@@ -77,8 +77,7 @@ if (!isProduction) {
 let isConnected = false;
 
 const connectDB = async () => {
-  if (isConnected) {
-    console.log('✅ Using existing MongoDB connection');
+  if (isConnected && mongoose.connection.readyState === 1) {
     return;
   }
 
@@ -115,6 +114,7 @@ app.use(async (req, res, next) => {
 // ============================================
 try {
   app.use('/api/auth', require('./routes/auth'));
+  app.use('/api/dashboard', require('./routes/dashboard'));
   app.use('/api/company-settings', require('./routes/companySettings'));
   app.use('/api/qualities', require('./routes/quality'));
   app.use('/api/parties', require('./routes/party'));

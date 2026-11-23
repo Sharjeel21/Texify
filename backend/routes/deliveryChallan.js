@@ -22,7 +22,8 @@ router.get('/', authenticate, async (req, res) => {
   try {
     const challans = await DeliveryChallan.find({ user: req.userId })
       .populate('quality')
-      .sort({ createdAt: -1 });
+      .sort({ createdAt: -1 })
+      .lean();
     res.json(challans);
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -34,22 +35,13 @@ router.get('/by-quality/:qualityId',
   authenticate,
   async (req, res) => {
     try {
-      // Verify quality belongs to user
-      const quality = await Quality.findOne({ 
-        _id: req.params.qualityId,
-        user: req.userId 
-      });
-      
-      if (!quality) {
-        return res.status(404).json({ message: 'Quality not found or access denied' });
-      }
-
       const challans = await DeliveryChallan.find({ 
         user: req.userId,
         quality: req.params.qualityId
       })
         .populate('quality')
-        .sort({ createdAt: -1 });
+        .sort({ createdAt: -1 })
+        .lean();
       res.json(challans);
     } catch (error) {
       console.error('Error in by-quality route:', error);
@@ -63,16 +55,6 @@ router.get('/incomplete/:qualityId',
   authenticate,
   async (req, res) => {
     try {
-      // Verify quality belongs to user
-      const quality = await Quality.findOne({ 
-        _id: req.params.qualityId,
-        user: req.userId 
-      });
-      
-      if (!quality) {
-        return res.status(404).json({ message: 'Quality not found or access denied' });
-      }
-
       const challans = await DeliveryChallan.find({ 
         user: req.userId,
         quality: req.params.qualityId,
@@ -80,7 +62,8 @@ router.get('/incomplete/:qualityId',
         isSold: false
       })
         .populate('quality')
-        .sort({ createdAt: -1 });
+        .sort({ createdAt: -1 })
+        .lean();
       res.json(challans);
     } catch (error) {
       console.error('Error in incomplete route:', error);
@@ -94,26 +77,10 @@ router.get('/available/:qualityId',
   authenticate,
   async (req, res) => {
     try {
-      console.log('Fetching available challans for quality:', req.params.qualityId);
-      console.log('User ID:', req.userId);
-      
       // Validate qualityId
       if (!mongoose.Types.ObjectId.isValid(req.params.qualityId)) {
         return res.status(400).json({ message: 'Invalid quality ID format' });
       }
-
-      // Verify quality exists and belongs to user
-      const quality = await Quality.findOne({ 
-        _id: req.params.qualityId,
-        user: req.userId 
-      });
-      
-      if (!quality) {
-        console.log('Quality not found for ID:', req.params.qualityId);
-        return res.status(404).json({ message: 'Quality not found or access denied' });
-      }
-
-      console.log('Quality found:', quality.name);
 
       // Find available challans
       const challans = await DeliveryChallan.find({ 
@@ -123,13 +90,12 @@ router.get('/available/:qualityId',
         isSold: false
       })
         .populate('quality')
-        .sort({ createdAt: -1 });
+        .sort({ createdAt: -1 })
+        .lean();
       
-      console.log(`Found ${challans.length} available challans`);
       res.json(challans);
     } catch (error) {
       console.error('Error in available route:', error);
-      console.error('Stack trace:', error.stack);
       res.status(500).json({ 
         message: error.message,
         error: process.env.NODE_ENV === 'development' ? error.stack : undefined
@@ -144,7 +110,7 @@ router.get('/:id', authenticate, verifyOwnership(DeliveryChallan), async (req, r
     const challan = await DeliveryChallan.findOne({ 
       _id: req.params.id,
       user: req.userId 
-    }).populate('quality');
+    }).populate('quality').lean();
     
     if (!challan) {
       return res.status(404).json({ message: 'Delivery challan not found' });
@@ -266,28 +232,37 @@ router.post('/:id/add-bales',
         return res.status(400).json({ message: 'Cannot modify sold challan' });
       }
 
-      const qualityDoc = await Quality.findOne({ 
-        _id: challan.quality._id,
-        user: req.userId 
-      }).session(session);
-
-      // Process and add new bales with atomic bale number generation
+      // Process and add new bales with atomic batch bale number generation
       const processedBales = [];
-      
-      for (const bale of bales) {
-        // Use atomic increment for bale number
+      const numBales = Array.isArray(bales) ? bales.length : 0;
+
+      let startBaleNumber = 1;
+      if (numBales > 0) {
+        // Single atomic increment for the entire batch of bales
         const updatedQuality = await Quality.findOneAndUpdate(
           { _id: challan.quality._id, user: req.userId },
-          { $inc: { currentBaleNumber: 1 } },
+          { $inc: { currentBaleNumber: numBales } },
           { new: true, session }
         );
+
+        if (!updatedQuality) {
+          await session.abortTransaction();
+          return res.status(404).json({ message: 'Quality not found' });
+        }
+
+        startBaleNumber = updatedQuality.currentBaleNumber - numBales + 1;
+      }
+
+      for (let i = 0; i < numBales; i++) {
+        const bale = bales[i];
+        const baleNumber = startBaleNumber + i;
 
         const totalMeter = bale.cloths.reduce((sum, cloth) => sum + (parseFloat(cloth.meter) || 0), 0);
         const totalWeight = bale.cloths.reduce((sum, cloth) => sum + (parseFloat(cloth.weight) || 0), 0);
         const numberOfPieces = bale.cloths.length;
         
         processedBales.push({
-          baleNumber: updatedQuality.currentBaleNumber,
+          baleNumber,
           date: bale.date,
           cloths: bale.cloths,
           totalMeter,
@@ -323,7 +298,7 @@ router.post('/:id/add-bales',
       const updatedChallan = await DeliveryChallan.findOne({ 
         _id: req.params.id,
         user: req.userId 
-      }).populate('quality');
+      }).populate('quality').lean();
       
       console.log(`✅ Bales added to challan ${challan.challanNumber} by user ${req.userId}`);
       res.json(updatedChallan);
@@ -375,7 +350,7 @@ router.put('/:id/bales/:baleId',
       const updatedChallan = await DeliveryChallan.findOne({ 
         _id: req.params.id,
         user: req.userId 
-      }).populate('quality');
+      }).populate('quality').lean();
       
       res.json(updatedChallan);
     } catch (error) {
@@ -411,7 +386,7 @@ router.delete('/:id/bales/:baleId',
       const updatedChallan = await DeliveryChallan.findOne({ 
         _id: req.params.id,
         user: req.userId 
-      }).populate('quality');
+      }).populate('quality').lean();
       
       res.json(updatedChallan);
     } catch (error) {
